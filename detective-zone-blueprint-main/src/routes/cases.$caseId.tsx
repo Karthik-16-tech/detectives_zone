@@ -1,0 +1,476 @@
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { ArrowLeft, Star, Lock } from "lucide-react";
+
+import caseVoicemail from "@/assets/case-voicemail.png";
+import caseWitness from "@/assets/case-witness.png";
+import caseLetter from "@/assets/case-letter.png";
+import caseHeir from "@/assets/case-heir.png";
+import caseExperiment from "@/assets/case-experiment.png";
+import caseBetrayal from "@/assets/case-betrayal.png";
+import corkboard from "@/assets/evidencce/corkboard.jpg";
+import e01 from "@/assets/evidencce/e-01.jpg";
+import e02 from "@/assets/evidencce/e-02.jpg";
+import e03 from "@/assets/evidencce/e-03.jpg";
+import e04 from "@/assets/evidencce/e-04.jpg";
+import e05 from "@/assets/evidencce/e-05.jpg";
+import e06 from "@/assets/evidencce/e-06.jpg";
+import e07 from "@/assets/evidencce/e-07.jpg";
+import e08 from "@/assets/evidencce/e-08.jpg";
+import e09 from "@/assets/evidencce/e-09.jpg";
+import e10 from "@/assets/evidencce/e-10.jpg";
+import e11 from "@/assets/evidencce/e-11.jpg";
+import e12 from "@/assets/evidencce/e-12.jpg";
+import { EvidenceWall, type EvidencePin } from "@/components/templates/evidence-wall";
+import { HeroVideoCard } from "@/components/templates/hero-video-card";
+import { InvestigationModules } from "@/components/templates/investigation-modules";
+import { QuoteBanner } from "@/components/templates/quote-banner";
+
+export const Route = createFileRoute("/cases/$caseId")({
+  component: CaseDetailPage,
+  notFoundComponent: CaseNotFound,
+});
+
+type CaseFile = {
+  id: string;
+  title: string;
+  status: "UNSOLVED" | "COMPLETED" | "COMING SOON";
+  image: string;
+  description: string;
+  stars: number;
+  duration: string;
+  difficulty: string;
+  caseType: string;
+  dateOfIncident: string;
+  location: string;
+  progress: number;
+  pins: EvidencePin[];
+  links: [number, number][];
+};
+
+const caseFiles: Record<string, CaseFile> = {
+  "001": {
+    id: "001",
+    title: "The Last Voicemail",
+    status: "UNSOLVED",
+    image: caseVoicemail,
+    description:
+      "A successful businessman found dead in his study. No forced entry. No clear motive. Just a voicemail… and a lot of questions.",
+    stars: 5,
+    duration: "3–5 HOURS",
+    difficulty: "HARD",
+    caseType: "Homicide",
+    dateOfIncident: "15 July 2027",
+    location: "Varma Residence",
+    progress: 65,
+    pins: [
+      { id: "vm", x: 14, y: 20, label: "Voicemail", note: "3:47 AM. \"It's already done. Don't look for me.\"", image: e01 },
+      { id: "card", x: 42, y: 14, label: "Business Card", note: "Found under the desk. Dated the night before.", image: e02 },
+      { id: "receipt", x: 70, y: 28, label: "Receipt", note: "Dinner for two. Not his wife's handwriting.", image: e03 },
+      { id: "key", x: 28, y: 60, label: "Door Key", note: "Unmatched to any lock in the house.", image: e04 },
+      { id: "photo", x: 58, y: 66, label: "Photograph", note: "Torn in half. A face cut away with scissors.", image: e05 },
+      { id: "note", x: 86, y: 56, label: "Handwritten Note", note: "\"The hand that writes points there.\"", image: e06 },
+    ],
+    links: [
+      [0, 1],
+      [1, 2],
+      [0, 3],
+      [3, 4],
+      [4, 5],
+      [2, 5],
+    ],
+  },
+  "002": {
+    id: "002",
+    title: "The Silent Witness",
+    status: "UNSOLVED",
+    image: caseWitness,
+    description:
+      "A reclusive writer found dead in a locked room. A witness that never spoke... but saw everything.",
+    stars: 4,
+    duration: "3–6 HOURS",
+    difficulty: "HARD",
+    caseType: "Locked Room",
+    dateOfIncident: "22 June 2027",
+    location: "Morrow House",
+    progress: 40,
+    pins: [
+      { id: "mss", x: 14, y: 20, label: "Manuscript", note: "Final chapter rewritten eleven times.", image: e07 },
+      { id: "lamp", x: 44, y: 14, label: "Desk Lamp", note: "Bulb still warm. Nobody in the room.", image: e08 },
+      { id: "lock", x: 72, y: 30, label: "Locked Door", note: "Bolt thrown from the inside.", image: e09 },
+      { id: "glass", x: 30, y: 62, label: "Glass Shard", note: "Three fingerprints. Two of them his.", image: e10 },
+      { id: "book", x: 60, y: 70, label: "Open Diary", note: "Last entry: \"They know I saw.\"", image: e11 },
+      { id: "phone", x: 86, y: 58, label: "Phone", note: "One call out. To a number that doesn't exist.", image: e12 },
+    ],
+    links: [
+      [0, 1],
+      [1, 2],
+      [0, 3],
+      [3, 4],
+      [4, 5],
+      [2, 5],
+    ],
+  },
+  "003": {
+    id: "003",
+    title: "Blood in the Letter",
+    status: "COMING SOON",
+    image: caseLetter,
+    description: "A threatening letter. A missing girl. A trail of blood. The shadows are speaking.",
+    stars: 0,
+    duration: "COMING SOON",
+    difficulty: "MEDIUM",
+    caseType: "Classified",
+    dateOfIncident: "TBD",
+    location: "Redacted",
+    progress: 0,
+    pins: [
+      { id: "letter", x: 16, y: 22, label: "Letter", note: "Typed. Postmark from a town that burned down." },
+      { id: "stamp", x: 44, y: 14, label: "Blood Stain", note: "Dried on the fold. Dated before the threat." },
+      { id: "photo", x: 72, y: 30, label: "Photo", note: "A girl in a yellow coat. Face circled in red." },
+      { id: "map", x: 30, y: 62, label: "Map", note: "A route marked in pencil. Ends at the river." },
+      { id: "shoe", x: 60, y: 70, label: "Shoe Print", note: "Left behind. Size too small." },
+      { id: "note", x: 86, y: 58, label: "Note", note: "\"The shadows are speaking.\"" },
+    ],
+    links: [
+      [0, 1],
+      [1, 2],
+      [0, 3],
+      [3, 4],
+      [4, 5],
+      [2, 5],
+    ],
+  },
+  "004": {
+    id: "004",
+    title: "The Vanished One",
+    status: "COMING SOON",
+    image: caseHeir,
+    description: "They were here one day, gone the next. A disappearance that made no noise at all.",
+    stars: 0,
+    duration: "COMING SOON",
+    difficulty: "MEDIUM",
+    caseType: "Classified",
+    dateOfIncident: "TBD",
+    location: "Redacted",
+    progress: 0,
+    pins: [
+      { id: "bed", x: 16, y: 22, label: "Bed", note: "Unmade. Clothes still in the wardrobe." },
+      { id: "keys", x: 44, y: 14, label: "Car Keys", note: "Left on the table. Engine cold." },
+      { id: "wallet", x: 72, y: 30, label: "Wallet", note: "Cash untouched. Cards all there." },
+      { id: "journal", x: 30, y: 62, label: "Journal", note: "Pages torn from the last week." },
+      { id: "phone", x: 60, y: 70, label: "Phone", note: "Dead. Last message never sent." },
+      { id: "coat", x: 86, y: 58, label: "Coat", note: "Hanging by the door. Still damp." },
+    ],
+    links: [
+      [0, 1],
+      [1, 2],
+      [0, 3],
+      [3, 4],
+      [4, 5],
+      [2, 5],
+    ],
+  },
+  "005": {
+    id: "005",
+    title: "The Final Experiment",
+    status: "COMING SOON",
+    image: caseExperiment,
+    description: "A scientist's last experiment was never meant to be found. Now the cure is the disease.",
+    stars: 0,
+    duration: "COMING SOON",
+    difficulty: "HARD",
+    caseType: "Classified",
+    dateOfIncident: "TBD",
+    location: "Redacted",
+    progress: 0,
+    pins: [
+      { id: "vial", x: 16, y: 22, label: "Vial", note: "Label torn. A drop missing." },
+      { id: "log", x: 44, y: 14, label: "Lab Log", note: "Stops mid-sentence. Ink smudged." },
+      { id: "camera", x: 72, y: 30, label: "Camera", note: "Footage ends 11:47 PM." },
+      { id: "stamp", x: 30, y: 62, label: "Stamp", note: "Classified. Redacted twice." },
+      { id: "note", x: 60, y: 70, label: "Note", note: "\"Now the cure is the disease.\"" },
+      { id: "keycard", x: 86, y: 58, label: "Keycard", note: "Level 4 access. Used at 11:48 PM." },
+    ],
+    links: [
+      [0, 1],
+      [1, 2],
+      [0, 3],
+      [3, 4],
+      [4, 5],
+      [2, 5],
+    ],
+  },
+  "006": {
+    id: "006",
+    title: "Shadows of Betrayal",
+    status: "COMING SOON",
+    image: caseBetrayal,
+    description: "A man caught between loyalty and truth. One choice changed everything.",
+    stars: 0,
+    duration: "COMING SOON",
+    difficulty: "HARD",
+    caseType: "Classified",
+    dateOfIncident: "TBD",
+    location: "Redacted",
+    progress: 0,
+    pins: [
+      { id: "letter", x: 16, y: 22, label: "Letter", note: "Unsigned. A name crossed out." },
+      { id: "watch", x: 44, y: 14, label: "Watch", note: "Stopped at 11:47 PM. Second hand missing." },
+      { id: "receipt", x: 72, y: 30, label: "Receipt", note: "Two tickets. One name." },
+      { id: "photo", x: 30, y: 62, label: "Photo", note: "Two men shaking hands. Faces blurred." },
+      { id: "key", x: 60, y: 70, label: "Key", note: "Opens a drawer that shouldn't exist." },
+      { id: "note", x: 86, y: 58, label: "Note", note: "\"Trust no one.\"" },
+    ],
+    links: [
+      [0, 1],
+      [1, 2],
+      [0, 3],
+      [3, 4],
+      [4, 5],
+      [2, 5],
+    ],
+  },
+};
+
+function CaseDetailPage() {
+  const { caseId } = Route.useParams();
+  const file = caseFiles[caseId];
+
+  if (!file) {
+    return <CaseNotFound />;
+  }
+
+  const unlocked = file.status === "UNSOLVED";
+
+  const titleCase = (s: string) =>
+    s
+      .toLowerCase()
+      .split(" ")
+      .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+      .join(" ");
+
+  const metaRows = [
+    { label: "Case Status", value: titleCase(file.status) },
+    { label: "Difficulty", value: titleCase(file.difficulty) },
+    { label: "Investigation Time", value: titleCase(file.duration) },
+    { label: "Case Type", value: file.caseType },
+    { label: "Date of Incident", value: file.dateOfIncident },
+    { label: "Location", value: file.location },
+  ];
+
+  return (
+    <div className="min-h-screen bg-[#050505] text-[#C7C7C7] font-sans pt-[72px] relative overflow-hidden">
+      <div
+        className="pointer-events-none absolute inset-0 z-0 opacity-[0.04]"
+        style={{
+          backgroundImage: `
+            linear-gradient(rgba(255, 255, 255, 1) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(255, 255, 255, 1) 1px, transparent 1px)
+          `,
+          backgroundSize: "40px 40px",
+        }}
+      />
+
+      <div className="relative z-10 mx-auto max-w-[1440px] px-8 py-10">
+        {/* PAGE HEADER */}
+        <header className="flex flex-col md:flex-row justify-between items-start md:items-end border-b border-[#1A1A1A]/80 pb-7 mb-8 gap-4">
+          <div className="font-mono text-[10px] tracking-[2px] text-muted-foreground uppercase">
+            <Link to="/" className="hover:text-white transition-colors duration-300">Home</Link>
+            <span className="mx-2">/</span>
+            <Link to="/cases" className="hover:text-white transition-colors duration-300">Cases</Link>
+            <span className="mx-2">/</span>
+            <span className="text-[#B31217]">Case {file.id}</span>
+          </div>
+        </header>
+
+        {/* CASE INTRO */}
+        <section className="grid grid-cols-12 gap-8 mb-10 items-start">
+          <div className="col-span-12 lg:col-span-5">
+            <div className="relative rounded-lg overflow-hidden border border-[#1A1A1A]">
+              <img src={file.image} alt={file.title} className="w-full object-cover" />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#0B0B0B] via-transparent to-transparent opacity-80" />
+            </div>
+          </div>
+          <div className="col-span-12 lg:col-span-7">
+            <div className="flex items-center gap-3 mb-3">
+              <span className="font-mono text-[10px] tracking-[0.2em] uppercase text-[#B31217]">
+                Case {file.id}
+              </span>
+              <span
+                className={`px-2.5 py-1 font-mono text-[8px] font-bold tracking-[0.2em] uppercase rounded-sm ${
+                  file.status === "UNSOLVED"
+                    ? "bg-[#B31217] text-white"
+                    : "bg-neutral-800 text-muted-foreground"
+                }`}
+              >
+                {file.status}
+              </span>
+            </div>
+            <h1
+              className="font-display text-[48px] font-bold text-white tracking-[2px] leading-none uppercase mb-1"
+              style={{ fontFamily: "Bebas Neue, sans-serif" }}
+            >
+              {file.title}
+            </h1>
+            <p className="text-[12px] text-[#A0A0A0] font-mono tracking-[1.5px] uppercase mb-6">
+              Evidence wall — connect the dots
+            </p>
+
+            <div className="flex items-center gap-2 mb-4">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <Star
+                  key={i}
+                  className={`h-4 w-4 ${i < file.stars ? "text-[#B31217] fill-[#B31217]" : "text-neutral-800"}`}
+                />
+              ))}
+            </div>
+            <p className="text-[15px] leading-relaxed text-[#B5B5B5] max-w-2xl">
+              {file.description}
+            </p>
+
+            <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-5 border border-[#1A1A1A] bg-[#0B0B0B] rounded-lg p-6">
+              {metaRows.map((row) => (
+                <div key={row.label}>
+                  <p className="font-mono text-[9px] tracking-[0.2em] uppercase text-muted-foreground">
+                    {row.label}
+                  </p>
+                  <p
+                    className="mt-1 font-display text-[16px] text-white uppercase tracking-[1px]"
+                    style={{ fontFamily: "Bebas Neue, sans-serif" }}
+                  >
+                    {row.value}
+                  </p>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-6">
+              <div className="flex items-center justify-between mb-2">
+                <span className="font-mono text-[10px] tracking-[0.2em] uppercase text-muted-foreground">
+                  Investigation Progress
+                </span>
+                <span className="font-mono text-[10px] tracking-[0.2em] uppercase text-[#B31217]">
+                  {file.progress}%
+                </span>
+              </div>
+              <div className="h-1.5 w-full bg-neutral-800 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-[#B31217] rounded-full"
+                  style={{ width: `${file.progress}%` }}
+                />
+              </div>
+            </div>
+
+            <Link
+              to="/cases"
+              className="mt-8 inline-flex items-center gap-2 font-mono text-[11px] tracking-[0.2em] uppercase text-muted-foreground hover:text-white transition-colors duration-300"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Back to Case Files
+            </Link>
+          </div>
+        </section>
+
+        {/* CASE INTRO VIDEO */}
+        <HeroVideoCard />
+
+        {/* EVIDENCE WALL */}
+        <section className="border-t border-[#1A1A1A]/80 pt-10">
+          <div className="flex items-center gap-3 mb-8">
+            <span className="h-8 w-1 bg-[#B31217]" />
+            <div>
+              <h2
+                className="font-display text-[36px] font-bold text-white tracking-[2px] uppercase leading-none"
+                style={{ fontFamily: "Bebas Neue, sans-serif" }}
+              >
+                Evidence Wall
+              </h2>
+              <p className="text-[12px] text-[#A0A0A0] font-mono tracking-[1.5px] uppercase mt-2">
+                {unlocked
+                  ? "Hover the pins to inspect each piece. Follow the red string."
+                  : "Locked until the case is released."}
+              </p>
+            </div>
+          </div>
+          {unlocked ? (
+            <EvidenceWall
+              pins={file.pins}
+              links={file.links}
+              image={corkboard}
+              imageAlt="Corkboard evidence board"
+              height={620}
+              accent="#D32F2F"
+              background="#090909"
+              imageOpacity={0.45}
+            />
+          ) : (
+            <div
+              className="flex flex-col items-center justify-center rounded-2xl border border-[#1A1A1A] bg-[#0B0B0B] text-center"
+              style={{ height: 620 }}
+            >
+              <Lock className="h-10 w-10 text-muted-foreground mb-4" />
+              <p className="font-display text-[24px] text-white uppercase tracking-[1.5px]" style={{ fontFamily: "Bebas Neue, sans-serif" }}>
+                Case Classified
+              </p>
+              <p className="mt-2 max-w-sm font-mono text-[11px] leading-relaxed text-muted-foreground uppercase tracking-[0.12em]">
+                This case file is sealed. Return when the investigation is released.
+              </p>
+            </div>
+          )}
+        </section>
+
+        {/* BOARD DETAIL STRIP */}
+        <section className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-8">
+          {[
+            { t: "Room 104", s: "Hotel Key — serial legible" },
+            { t: "11:47 PM", s: "Pocket Watch — stopped" },
+            { t: "No. 404", s: "Sticky note — ask about the key" },
+          ].map((c) => (
+            <div
+              key={c.t}
+              className="p-5 bg-[#0B0B0B] border border-[#1A1A1A] rounded-lg"
+              style={{ boxShadow: "inset 0 1px 1px rgba(255,255,255,0.02)" }}
+            >
+              <p className="font-display text-[28px] text-[#B31217] leading-none" style={{ fontFamily: "Bebas Neue, sans-serif" }}>
+                {c.t}
+              </p>
+              <p className="mt-2 font-mono text-[9px] tracking-[0.15em] uppercase text-muted-foreground">{c.s}</p>
+            </div>
+          ))}
+        </section>
+
+        {/* INVESTIGATION MODULES */}
+        <section className="mt-8">
+          <InvestigationModules />
+        </section>
+
+        {/* QUOTE BANNER */}
+        <section className="mt-8">
+          <QuoteBanner />
+        </section>
+      </div>
+    </div>
+  );
+}
+
+function CaseNotFound() {
+  return (
+    <div className="min-h-screen bg-[#050505] text-[#C7C7C7] font-sans pt-[72px] flex items-center justify-center">
+      <div className="text-center px-8">
+        <p className="font-display text-[48px] text-[#B31217] leading-none" style={{ fontFamily: "Bebas Neue, sans-serif" }}>
+          404
+        </p>
+        <p className="mt-3 font-mono text-[11px] tracking-[0.2em] uppercase text-muted-foreground">
+          Case file not found
+        </p>
+        <Link
+          to="/cases"
+          className="mt-8 inline-flex items-center gap-2 font-mono text-[11px] tracking-[0.2em] uppercase text-[#B31217] hover:text-white transition-colors duration-300"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to Case Files
+        </Link>
+      </div>
+    </div>
+  );
+}

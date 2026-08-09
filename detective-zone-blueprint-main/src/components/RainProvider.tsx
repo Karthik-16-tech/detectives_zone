@@ -8,9 +8,7 @@ export const useRain = () => useContext(Ctx);
 export function RainProvider({ children }: { children: ReactNode }) {
   const [enabled, setEnabled] = useState(true);
   return (
-    <Ctx.Provider value={{ enabled, toggle: () => setEnabled((v) => !v) }}>
-      {children}
-    </Ctx.Provider>
+    <Ctx.Provider value={{ enabled, toggle: () => setEnabled((v) => !v) }}>{children}</Ctx.Provider>
   );
 }
 
@@ -73,7 +71,7 @@ export function RainCanvas({ enabled }: { enabled: boolean }) {
     let gustTimer = 0;
 
     // thunder state
-    let nextStrike = 5000 + Math.random() * 12000;
+    let nextStrike = 5000;
     let elapsed = 0;
 
     const strike = () => {
@@ -145,7 +143,7 @@ export function RainCanvas({ enabled }: { enabled: boolean }) {
 
       if (elapsed > nextStrike) {
         elapsed = 0;
-        nextStrike = 9000 + Math.random() * 22000;
+        nextStrike = 5000;
         strike();
       }
 

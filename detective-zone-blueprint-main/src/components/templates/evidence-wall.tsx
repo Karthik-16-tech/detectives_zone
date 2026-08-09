@@ -24,7 +24,7 @@ export type EvidenceWallProps = {
   links?: [number, number][];
   image?: string;
   imageAlt?: string;
-  height?: number;
+  height?: number | string;
   accent?: string;
   background?: string;
   imageOpacity?: number;
@@ -130,7 +130,7 @@ export function EvidenceWall({
               position: "absolute",
               left: `${p.x}%`,
               top: `${p.y}%`,
-              width: 150,
+              width: "min(150px, 30vw)",
               padding: 12,
               textAlign: "left",
               cursor: "pointer",

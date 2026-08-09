@@ -1,16 +1,21 @@
 import { Link } from "@tanstack/react-router";
-import { Fingerprint, ShieldCheck, BookOpen, Briefcase } from "lucide-react";
+import { ShieldCheck, BookOpen, Briefcase, Mail } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import logo from "@/assets/logo.png";
 
 export function Footer() {
   return (
-    <footer className="relative mt-30 border-t border-border">
+    <footer className="relative mt-14 border-t border-border bg-secondary sm:mt-24 lg:mt-30">
       {/* Main columns */}
-      <div className="shell grid grid-cols-12 gap-8 py-16" style={{ minHeight: 320 }}>
-        <div className="col-span-12 lg:col-span-5">
+      <div className="shell grid grid-cols-12 gap-8 py-12 sm:py-16" style={{ minHeight: 320 }}>
+        <div className="col-span-12 lg:col-span-3">
           <div className="flex items-center gap-3">
-            <span className="flex h-11 w-11 items-center justify-center border border-border bg-secondary font-display text-lg font-bold tracking-widest">
-              DZ
-            </span>
+            <img
+              src={logo}
+              alt="Detective Zone logo"
+              className="h-11 w-11 shrink-0 object-contain"
+            />
             <span className="font-display text-[17px] font-semibold tracking-[0.24em] uppercase">
               Detective <span className="text-blood">Zone</span>
             </span>
@@ -39,9 +44,13 @@ export function Footer() {
               { to: "/challenge", label: "Challenge" },
               { to: "/cases", label: "Open Cases" },
               { to: "/store", label: "The Store" },
+              { to: "/contact", label: "Contact" },
             ].map((l) => (
               <li key={l.to}>
-                <Link to={l.to} className="group flex items-center gap-2 transition-colors hover:text-foreground">
+                <Link
+                  to={l.to}
+                  className="group flex items-center gap-2 transition-colors hover:text-foreground"
+                >
                   <span className="h-px w-0 bg-blood transition-all duration-300 group-hover:w-3" />
                   {l.label}
                 </Link>
@@ -49,7 +58,7 @@ export function Footer() {
             ))}
           </ul>
         </div>
-        <div className="col-span-6 lg:col-span-4">
+        <div className="col-span-6 lg:col-span-3">
           <p className="caption">Investigation Division</p>
           <ul className="mt-6 space-y-3 font-mono text-[13px] text-muted-foreground">
             <li className="flex items-start gap-2">
@@ -72,26 +81,38 @@ export function Footer() {
             Hotline open 24/7 for active cases.
           </p>
         </div>
-      </div>
-
-      {/* Bottom bar */}
-      <div
-        className="relative flex items-center justify-between overflow-hidden border-t border-border px-12 font-mono text-[11px] tracking-[0.2em] text-muted-foreground uppercase"
-        style={{ height: 64 }}
-      >
-        <span>© 2026 Detective Zone</span>
-        <span className="hidden text-foreground/70 sm:block">Truth isn't given. It's discovered.</span>
-        <span className="flex items-center gap-4">
-          <Fingerprint className="h-5 w-5 opacity-30" />
-          <span className="-rotate-3 border border-blood/60 px-2 py-1 text-blood">Top Secret</span>
-        </span>
-        <span
-          className="pointer-events-none absolute inset-x-0 h-16 opacity-[0.06]"
-          style={{
-            background: "linear-gradient(180deg,transparent,white,transparent)",
-            animation: "dz-scan 7s linear infinite",
-          }}
-        />
+        <div className="col-span-12 lg:col-span-3">
+          <p className="caption">Newsletter</p>
+          <div className="mt-6 border border-border bg-background/40 p-4">
+            <p className="flex items-center gap-2 caption">
+              <Mail className="h-3.5 w-3.5 text-blood" />
+              The Classified Briefing
+            </p>
+            <p className="mt-2 text-[12px] leading-relaxed text-muted-foreground">
+              New cases and clues before they go public.
+            </p>
+            <form
+              className="mt-4 flex flex-col gap-2"
+              onSubmit={(e) => {
+                e.preventDefault();
+                const input = e.currentTarget.elements.namedItem("email") as HTMLInputElement;
+                input.value = "";
+              }}
+            >
+              <Input
+                name="email"
+                type="email"
+                required
+                placeholder="Your e-mail"
+                aria-label="Email address"
+                className="h-9 font-mono text-[13px]"
+              />
+              <Button type="submit" size="sm" className="bg-blood text-white hover:bg-blood/90">
+                Subscribe
+              </Button>
+            </form>
+          </div>
+        </div>
       </div>
     </footer>
   );

@@ -5,7 +5,7 @@ import alley from "@/assets/evidencce/alley.jpg";
 export function QuoteBanner() {
   return (
     <section className="panel grain relative grid grid-cols-1 overflow-hidden lg:grid-cols-[minmax(0,1fr)_460px]">
-      <div className="flex items-start gap-7 px-10 py-12">
+      <div className="flex items-start gap-7 px-6 py-10 sm:px-10 sm:py-12">
         <span className="font-display text-6xl leading-none text-primary" aria-hidden="true">
           &ldquo;
         </span>

@@ -36,7 +36,7 @@ function EvidenceWallPage() {
   return (
     <div className="min-h-screen bg-background text-foreground">
       <main className="mx-auto max-w-[1600px] px-6 pb-20 lg:px-10">
-        <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 py-7">
+        <div className="grid grid-cols-1 items-center gap-4 py-7 sm:grid-cols-[minmax(0,1fr)_auto]">
           <div className="min-w-0">
             <div className="flex items-center gap-2 text-primary">
               <MapPin className="size-4 shrink-0" />
@@ -63,7 +63,7 @@ function EvidenceWallPage() {
           pins={pins}
           links={EVIDENCE_LINKS}
           image={corkboard}
-          height={860}
+          height="min(860px, 170vw)"
           accent="#E53935"
           background="#090909"
           imageOpacity={0.4}

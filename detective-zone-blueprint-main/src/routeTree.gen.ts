@@ -11,8 +11,10 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AboutRouteImport } from './routes/about'
+import { Route as CartRouteImport } from './routes/cart'
 import { Route as CasesRouteImport } from './routes/cases'
 import { Route as ChallengeRouteImport } from './routes/challenge'
+import { Route as ContactRouteImport } from './routes/contact'
 import { Route as EvidenceWallRouteImport } from './routes/evidence-wall'
 import { Route as StoreRouteImport } from './routes/store'
 import { Route as CasesIndexRouteImport } from './routes/cases/index'
@@ -28,6 +30,11 @@ const AboutRoute = AboutRouteImport.update({
   path: '/about',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CartRoute = CartRouteImport.update({
+  id: '/cart',
+  path: '/cart',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CasesRoute = CasesRouteImport.update({
   id: '/cases',
   path: '/cases',
@@ -36,6 +43,11 @@ const CasesRoute = CasesRouteImport.update({
 const ChallengeRoute = ChallengeRouteImport.update({
   id: '/challenge',
   path: '/challenge',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ContactRoute = ContactRouteImport.update({
+  id: '/contact',
+  path: '/contact',
   getParentRoute: () => rootRouteImport,
 } as any)
 const EvidenceWallRoute = EvidenceWallRouteImport.update({
@@ -62,8 +74,10 @@ const CasesCaseIdRoute = CasesCaseIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/cart': typeof CartRoute
   '/cases': typeof CasesRouteWithChildren
   '/challenge': typeof ChallengeRoute
+  '/contact': typeof ContactRoute
   '/evidence-wall': typeof EvidenceWallRoute
   '/store': typeof StoreRoute
   '/cases/$caseId': typeof CasesCaseIdRoute
@@ -72,7 +86,9 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/cart': typeof CartRoute
   '/challenge': typeof ChallengeRoute
+  '/contact': typeof ContactRoute
   '/evidence-wall': typeof EvidenceWallRoute
   '/store': typeof StoreRoute
   '/cases/$caseId': typeof CasesCaseIdRoute
@@ -82,8 +98,10 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/cart': typeof CartRoute
   '/cases': typeof CasesRouteWithChildren
   '/challenge': typeof ChallengeRoute
+  '/contact': typeof ContactRoute
   '/evidence-wall': typeof EvidenceWallRoute
   '/store': typeof StoreRoute
   '/cases/$caseId': typeof CasesCaseIdRoute
@@ -94,8 +112,10 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/about'
+    | '/cart'
     | '/cases'
     | '/challenge'
+    | '/contact'
     | '/evidence-wall'
     | '/store'
     | '/cases/$caseId'
@@ -104,7 +124,9 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/about'
+    | '/cart'
     | '/challenge'
+    | '/contact'
     | '/evidence-wall'
     | '/store'
     | '/cases/$caseId'
@@ -113,8 +135,10 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/about'
+    | '/cart'
     | '/cases'
     | '/challenge'
+    | '/contact'
     | '/evidence-wall'
     | '/store'
     | '/cases/$caseId'
@@ -124,8 +148,10 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AboutRoute: typeof AboutRoute
+  CartRoute: typeof CartRoute
   CasesRoute: typeof CasesRouteWithChildren
   ChallengeRoute: typeof ChallengeRoute
+  ContactRoute: typeof ContactRoute
   EvidenceWallRoute: typeof EvidenceWallRoute
   StoreRoute: typeof StoreRoute
 }
@@ -146,6 +172,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AboutRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/cart': {
+      id: '/cart'
+      path: '/cart'
+      fullPath: '/cart'
+      preLoaderRoute: typeof CartRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/cases': {
       id: '/cases'
       path: '/cases'
@@ -158,6 +191,13 @@ declare module '@tanstack/react-router' {
       path: '/challenge'
       fullPath: '/challenge'
       preLoaderRoute: typeof ChallengeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/contact': {
+      id: '/contact'
+      path: '/contact'
+      fullPath: '/contact'
+      preLoaderRoute: typeof ContactRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/evidence-wall': {
@@ -206,8 +246,10 @@ const CasesRouteWithChildren = CasesRoute._addFileChildren(CasesRouteChildren)
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AboutRoute: AboutRoute,
+  CartRoute: CartRoute,
   CasesRoute: CasesRouteWithChildren,
   ChallengeRoute: ChallengeRoute,
+  ContactRoute: ContactRoute,
   EvidenceWallRoute: EvidenceWallRoute,
   StoreRoute: StoreRoute,
 }

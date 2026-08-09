@@ -22,7 +22,7 @@ const MODULES = [
 
 export function InvestigationModules() {
   return (
-    <section className="panel grain p-8">
+    <section className="panel grain p-4 sm:p-8">
       <div className="grid grid-cols-[minmax(0,1fr)_auto] items-end gap-4">
         <div className="min-w-0">
           <div className="flex items-center gap-4">

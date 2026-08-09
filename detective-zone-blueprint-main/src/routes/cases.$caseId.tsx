@@ -24,6 +24,7 @@ import { EvidenceWall, type EvidencePin } from "@/components/templates/evidence-
 import { HeroVideoCard } from "@/components/templates/hero-video-card";
 import { InvestigationModules } from "@/components/templates/investigation-modules";
 import { QuoteBanner } from "@/components/templates/quote-banner";
+import case001Video from "@/assets/Untitled design (5).mp4";
 
 export const Route = createFileRoute("/cases/$caseId")({
   component: CaseDetailPage,
@@ -42,7 +43,6 @@ type CaseFile = {
   caseType: string;
   dateOfIncident: string;
   location: string;
-  progress: number;
   pins: EvidencePin[];
   links: [number, number][];
 };
@@ -61,14 +61,55 @@ const caseFiles: Record<string, CaseFile> = {
     caseType: "Homicide",
     dateOfIncident: "15 July 2027",
     location: "Varma Residence",
-    progress: 65,
     pins: [
-      { id: "vm", x: 14, y: 20, label: "Voicemail", note: "3:47 AM. \"It's already done. Don't look for me.\"", image: e01 },
-      { id: "card", x: 42, y: 14, label: "Business Card", note: "Found under the desk. Dated the night before.", image: e02 },
-      { id: "receipt", x: 70, y: 28, label: "Receipt", note: "Dinner for two. Not his wife's handwriting.", image: e03 },
-      { id: "key", x: 28, y: 60, label: "Door Key", note: "Unmatched to any lock in the house.", image: e04 },
-      { id: "photo", x: 58, y: 66, label: "Photograph", note: "Torn in half. A face cut away with scissors.", image: e05 },
-      { id: "note", x: 86, y: 56, label: "Handwritten Note", note: "\"The hand that writes points there.\"", image: e06 },
+      {
+        id: "vm",
+        x: 14,
+        y: 22,
+        label: "Voicemail",
+        note: "3:47 AM. \"It's already done. Don't look for me.\"",
+        image: e01,
+      },
+      {
+        id: "card",
+        x: 45,
+        y: 18,
+        label: "Business Card",
+        note: "Found under the desk. Dated the night before.",
+        image: e02,
+      },
+      {
+        id: "receipt",
+        x: 78,
+        y: 24,
+        label: "Receipt",
+        note: "Dinner for two. Not his wife's handwriting.",
+        image: e03,
+      },
+      {
+        id: "key",
+        x: 16,
+        y: 68,
+        label: "Door Key",
+        note: "Unmatched to any lock in the house.",
+        image: e04,
+      },
+      {
+        id: "photo",
+        x: 48,
+        y: 72,
+        label: "Photograph",
+        note: "Torn in half. A face cut away with scissors.",
+        image: e05,
+      },
+      {
+        id: "note",
+        x: 82,
+        y: 66,
+        label: "Handwritten Note",
+        note: '"The hand that writes points there."',
+        image: e06,
+      },
     ],
     links: [
       [0, 1],
@@ -92,14 +133,55 @@ const caseFiles: Record<string, CaseFile> = {
     caseType: "Locked Room",
     dateOfIncident: "22 June 2027",
     location: "Morrow House",
-    progress: 40,
     pins: [
-      { id: "mss", x: 14, y: 20, label: "Manuscript", note: "Final chapter rewritten eleven times.", image: e07 },
-      { id: "lamp", x: 44, y: 14, label: "Desk Lamp", note: "Bulb still warm. Nobody in the room.", image: e08 },
-      { id: "lock", x: 72, y: 30, label: "Locked Door", note: "Bolt thrown from the inside.", image: e09 },
-      { id: "glass", x: 30, y: 62, label: "Glass Shard", note: "Three fingerprints. Two of them his.", image: e10 },
-      { id: "book", x: 60, y: 70, label: "Open Diary", note: "Last entry: \"They know I saw.\"", image: e11 },
-      { id: "phone", x: 86, y: 58, label: "Phone", note: "One call out. To a number that doesn't exist.", image: e12 },
+      {
+        id: "mss",
+        x: 14,
+        y: 20,
+        label: "Manuscript",
+        note: "Final chapter rewritten eleven times.",
+        image: e07,
+      },
+      {
+        id: "lamp",
+        x: 44,
+        y: 14,
+        label: "Desk Lamp",
+        note: "Bulb still warm. Nobody in the room.",
+        image: e08,
+      },
+      {
+        id: "lock",
+        x: 72,
+        y: 30,
+        label: "Locked Door",
+        note: "Bolt thrown from the inside.",
+        image: e09,
+      },
+      {
+        id: "glass",
+        x: 30,
+        y: 62,
+        label: "Glass Shard",
+        note: "Three fingerprints. Two of them his.",
+        image: e10,
+      },
+      {
+        id: "book",
+        x: 60,
+        y: 70,
+        label: "Open Diary",
+        note: 'Last entry: "They know I saw."',
+        image: e11,
+      },
+      {
+        id: "phone",
+        x: 86,
+        y: 58,
+        label: "Phone",
+        note: "One call out. To a number that doesn't exist.",
+        image: e12,
+      },
     ],
     links: [
       [0, 1],
@@ -115,21 +197,45 @@ const caseFiles: Record<string, CaseFile> = {
     title: "Blood in the Letter",
     status: "COMING SOON",
     image: caseLetter,
-    description: "A threatening letter. A missing girl. A trail of blood. The shadows are speaking.",
+    description:
+      "A threatening letter. A missing girl. A trail of blood. The shadows are speaking.",
     stars: 0,
     duration: "COMING SOON",
     difficulty: "MEDIUM",
     caseType: "Classified",
     dateOfIncident: "TBD",
     location: "Redacted",
-    progress: 0,
     pins: [
-      { id: "letter", x: 16, y: 22, label: "Letter", note: "Typed. Postmark from a town that burned down." },
-      { id: "stamp", x: 44, y: 14, label: "Blood Stain", note: "Dried on the fold. Dated before the threat." },
-      { id: "photo", x: 72, y: 30, label: "Photo", note: "A girl in a yellow coat. Face circled in red." },
-      { id: "map", x: 30, y: 62, label: "Map", note: "A route marked in pencil. Ends at the river." },
+      {
+        id: "letter",
+        x: 16,
+        y: 22,
+        label: "Letter",
+        note: "Typed. Postmark from a town that burned down.",
+      },
+      {
+        id: "stamp",
+        x: 44,
+        y: 14,
+        label: "Blood Stain",
+        note: "Dried on the fold. Dated before the threat.",
+      },
+      {
+        id: "photo",
+        x: 72,
+        y: 30,
+        label: "Photo",
+        note: "A girl in a yellow coat. Face circled in red.",
+      },
+      {
+        id: "map",
+        x: 30,
+        y: 62,
+        label: "Map",
+        note: "A route marked in pencil. Ends at the river.",
+      },
       { id: "shoe", x: 60, y: 70, label: "Shoe Print", note: "Left behind. Size too small." },
-      { id: "note", x: 86, y: 58, label: "Note", note: "\"The shadows are speaking.\"" },
+      { id: "note", x: 86, y: 58, label: "Note", note: '"The shadows are speaking."' },
     ],
     links: [
       [0, 1],
@@ -145,14 +251,14 @@ const caseFiles: Record<string, CaseFile> = {
     title: "The Vanished One",
     status: "COMING SOON",
     image: caseHeir,
-    description: "They were here one day, gone the next. A disappearance that made no noise at all.",
+    description:
+      "They were here one day, gone the next. A disappearance that made no noise at all.",
     stars: 0,
     duration: "COMING SOON",
     difficulty: "MEDIUM",
     caseType: "Classified",
     dateOfIncident: "TBD",
     location: "Redacted",
-    progress: 0,
     pins: [
       { id: "bed", x: 16, y: 22, label: "Bed", note: "Unmade. Clothes still in the wardrobe." },
       { id: "keys", x: 44, y: 14, label: "Car Keys", note: "Left on the table. Engine cold." },
@@ -175,20 +281,20 @@ const caseFiles: Record<string, CaseFile> = {
     title: "The Final Experiment",
     status: "COMING SOON",
     image: caseExperiment,
-    description: "A scientist's last experiment was never meant to be found. Now the cure is the disease.",
+    description:
+      "A scientist's last experiment was never meant to be found. Now the cure is the disease.",
     stars: 0,
     duration: "COMING SOON",
     difficulty: "HARD",
     caseType: "Classified",
     dateOfIncident: "TBD",
     location: "Redacted",
-    progress: 0,
     pins: [
       { id: "vial", x: 16, y: 22, label: "Vial", note: "Label torn. A drop missing." },
       { id: "log", x: 44, y: 14, label: "Lab Log", note: "Stops mid-sentence. Ink smudged." },
       { id: "camera", x: 72, y: 30, label: "Camera", note: "Footage ends 11:47 PM." },
       { id: "stamp", x: 30, y: 62, label: "Stamp", note: "Classified. Redacted twice." },
-      { id: "note", x: 60, y: 70, label: "Note", note: "\"Now the cure is the disease.\"" },
+      { id: "note", x: 60, y: 70, label: "Note", note: '"Now the cure is the disease."' },
       { id: "keycard", x: 86, y: 58, label: "Keycard", note: "Level 4 access. Used at 11:48 PM." },
     ],
     links: [
@@ -212,14 +318,19 @@ const caseFiles: Record<string, CaseFile> = {
     caseType: "Classified",
     dateOfIncident: "TBD",
     location: "Redacted",
-    progress: 0,
     pins: [
       { id: "letter", x: 16, y: 22, label: "Letter", note: "Unsigned. A name crossed out." },
-      { id: "watch", x: 44, y: 14, label: "Watch", note: "Stopped at 11:47 PM. Second hand missing." },
+      {
+        id: "watch",
+        x: 44,
+        y: 14,
+        label: "Watch",
+        note: "Stopped at 11:47 PM. Second hand missing.",
+      },
       { id: "receipt", x: 72, y: 30, label: "Receipt", note: "Two tickets. One name." },
       { id: "photo", x: 30, y: 62, label: "Photo", note: "Two men shaking hands. Faces blurred." },
       { id: "key", x: 60, y: 70, label: "Key", note: "Opens a drawer that shouldn't exist." },
-      { id: "note", x: 86, y: 58, label: "Note", note: "\"Trust no one.\"" },
+      { id: "note", x: 86, y: 58, label: "Note", note: '"Trust no one."' },
     ],
     links: [
       [0, 1],
@@ -271,13 +382,17 @@ function CaseDetailPage() {
         }}
       />
 
-      <div className="relative z-10 mx-auto max-w-[1440px] px-8 py-10">
+      <div className="relative z-10 mx-auto max-w-[1440px] px-4 py-10 sm:px-6 lg:px-8">
         {/* PAGE HEADER */}
         <header className="flex flex-col md:flex-row justify-between items-start md:items-end border-b border-[#1A1A1A]/80 pb-7 mb-8 gap-4">
           <div className="font-mono text-[10px] tracking-[2px] text-muted-foreground uppercase">
-            <Link to="/" className="hover:text-white transition-colors duration-300">Home</Link>
+            <Link to="/" className="hover:text-white transition-colors duration-300">
+              Home
+            </Link>
             <span className="mx-2">/</span>
-            <Link to="/cases" className="hover:text-white transition-colors duration-300">Cases</Link>
+            <Link to="/cases" className="hover:text-white transition-colors duration-300">
+              Cases
+            </Link>
             <span className="mx-2">/</span>
             <span className="text-[#B31217]">Case {file.id}</span>
           </div>
@@ -307,7 +422,7 @@ function CaseDetailPage() {
               </span>
             </div>
             <h1
-              className="font-display text-[48px] font-bold text-white tracking-[2px] leading-none uppercase mb-1"
+              className="font-display text-[clamp(2.25rem,8vw,3rem)] font-bold text-white tracking-[2px] leading-none uppercase mb-1"
               style={{ fontFamily: "Bebas Neue, sans-serif" }}
             >
               {file.title}
@@ -344,23 +459,6 @@ function CaseDetailPage() {
               ))}
             </div>
 
-            <div className="mt-6">
-              <div className="flex items-center justify-between mb-2">
-                <span className="font-mono text-[10px] tracking-[0.2em] uppercase text-muted-foreground">
-                  Investigation Progress
-                </span>
-                <span className="font-mono text-[10px] tracking-[0.2em] uppercase text-[#B31217]">
-                  {file.progress}%
-                </span>
-              </div>
-              <div className="h-1.5 w-full bg-neutral-800 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-[#B31217] rounded-full"
-                  style={{ width: `${file.progress}%` }}
-                />
-              </div>
-            </div>
-
             <Link
               to="/cases"
               className="mt-8 inline-flex items-center gap-2 font-mono text-[11px] tracking-[0.2em] uppercase text-muted-foreground hover:text-white transition-colors duration-300"
@@ -372,7 +470,7 @@ function CaseDetailPage() {
         </section>
 
         {/* CASE INTRO VIDEO */}
-        <HeroVideoCard />
+        <HeroVideoCard videoSrc={file.id === "001" ? case001Video : undefined} />
 
         {/* EVIDENCE WALL */}
         <section className="border-t border-[#1A1A1A]/80 pt-10">
@@ -398,7 +496,7 @@ function CaseDetailPage() {
               links={file.links}
               image={corkboard}
               imageAlt="Corkboard evidence board"
-              height={620}
+              height="min(560px, 130vw)"
               accent="#D32F2F"
               background="#090909"
               imageOpacity={0.45}
@@ -406,10 +504,13 @@ function CaseDetailPage() {
           ) : (
             <div
               className="flex flex-col items-center justify-center rounded-2xl border border-[#1A1A1A] bg-[#0B0B0B] text-center"
-              style={{ height: 620 }}
+              style={{ height: "min(560px, 130vw)" }}
             >
               <Lock className="h-10 w-10 text-muted-foreground mb-4" />
-              <p className="font-display text-[24px] text-white uppercase tracking-[1.5px]" style={{ fontFamily: "Bebas Neue, sans-serif" }}>
+              <p
+                className="font-display text-[24px] text-white uppercase tracking-[1.5px]"
+                style={{ fontFamily: "Bebas Neue, sans-serif" }}
+              >
                 Case Classified
               </p>
               <p className="mt-2 max-w-sm font-mono text-[11px] leading-relaxed text-muted-foreground uppercase tracking-[0.12em]">
@@ -431,10 +532,15 @@ function CaseDetailPage() {
               className="p-5 bg-[#0B0B0B] border border-[#1A1A1A] rounded-lg"
               style={{ boxShadow: "inset 0 1px 1px rgba(255,255,255,0.02)" }}
             >
-              <p className="font-display text-[28px] text-[#B31217] leading-none" style={{ fontFamily: "Bebas Neue, sans-serif" }}>
+              <p
+                className="font-display text-[28px] text-[#B31217] leading-none"
+                style={{ fontFamily: "Bebas Neue, sans-serif" }}
+              >
                 {c.t}
               </p>
-              <p className="mt-2 font-mono text-[9px] tracking-[0.15em] uppercase text-muted-foreground">{c.s}</p>
+              <p className="mt-2 font-mono text-[9px] tracking-[0.15em] uppercase text-muted-foreground">
+                {c.s}
+              </p>
             </div>
           ))}
         </section>
@@ -457,7 +563,10 @@ function CaseNotFound() {
   return (
     <div className="min-h-screen bg-[#050505] text-[#C7C7C7] font-sans pt-[72px] flex items-center justify-center">
       <div className="text-center px-8">
-        <p className="font-display text-[48px] text-[#B31217] leading-none" style={{ fontFamily: "Bebas Neue, sans-serif" }}>
+        <p
+          className="font-display text-[48px] text-[#B31217] leading-none"
+          style={{ fontFamily: "Bebas Neue, sans-serif" }}
+        >
           404
         </p>
         <p className="mt-3 font-mono text-[11px] tracking-[0.2em] uppercase text-muted-foreground">

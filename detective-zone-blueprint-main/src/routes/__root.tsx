@@ -14,7 +14,7 @@ import { reportLovableError } from "../lib/lovable-error-reporting";
 import { RainProvider } from "../components/RainProvider";
 import { Navbar } from "../components/Navbar";
 import { Footer } from "../components/Footer";
-
+import { SmoothScrollProvider } from "../components/SmoothScroll";
 
 function NotFoundComponent() {
   return (
@@ -105,7 +105,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       {
         rel: "stylesheet",
-        href: "https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@300;400;500&family=IBM+Plex+Sans:wght@300;400;500&display=swap",
+        href: "https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@300;400;500&family=IBM+Plex+Sans:wght@300;400;500&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&family=Special+Elite&family=Courier+Prime:wght@400;700&family=Caveat:wght@400;500;600;700&family=Share+Tech+Mono&display=swap",
       },
       { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
     ],
@@ -131,20 +131,28 @@ function RootShell({ children }: { children: ReactNode }) {
   );
 }
 
+import { CartProvider } from "../context/CartContext";
+import { PreloaderProvider } from "../context/PreloaderContext";
+
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
 
   return (
     <QueryClientProvider client={queryClient}>
-      <RainProvider>
-        <Navbar />
-        <main className="min-h-screen">
-          {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-          <Outlet />
-        </main>
-        <Footer />
-      </RainProvider>
+      <CartProvider>
+        <SmoothScrollProvider>
+          <RainProvider>
+            <PreloaderProvider>
+              <Navbar />
+              <main className="min-h-screen">
+                {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
+                <Outlet />
+              </main>
+              <Footer />
+            </PreloaderProvider>
+          </RainProvider>
+        </SmoothScrollProvider>
+      </CartProvider>
     </QueryClientProvider>
   );
 }
-

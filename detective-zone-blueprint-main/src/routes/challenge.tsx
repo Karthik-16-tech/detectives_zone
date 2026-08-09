@@ -2,8 +2,6 @@ import { createFileRoute } from "@tanstack/react-router";
 import {
   Fingerprint,
   Gift,
-  Lock,
-  LockOpen,
   Check,
   Search,
   AlertTriangle,
@@ -203,25 +201,6 @@ function MysteryCard({ mystery, value, solved, onChange, onSubmit }: MysteryCard
             </span>
           </div>
         </div>
-        <div
-          style={{
-            width: 32,
-            height: 32,
-            borderRadius: "50%",
-            border: `1px solid ${solved ? "rgba(211,47,47,0.5)" : "rgba(255,255,255,0.08)"}`,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            background: solved ? "rgba(211,47,47,0.1)" : "rgba(255,255,255,0.02)",
-            transition: "all 0.4s ease",
-          }}
-        >
-          {solved ? (
-            <LockOpen style={{ width: 14, height: 14, color: "#D32F2F" }} />
-          ) : (
-            <Lock style={{ width: 14, height: 14, color: "#555" }} />
-          )}
-        </div>
       </div>
 
       {/* Clue tag */}
@@ -235,7 +214,7 @@ function MysteryCard({ mystery, value, solved, onChange, onSubmit }: MysteryCard
           textTransform: "uppercase",
         }}
       >
-        ◈ {mystery.clue}
+        {mystery.clue}
       </div>
 
       {/* Question */}
@@ -559,7 +538,7 @@ function Challenge() {
             ease={0.12}
             style={{
               borderRadius: 20,
-              minHeight: 520,
+              minHeight: 420,
               overflow: "hidden",
               border: "1px solid rgba(255,255,255,0.06)",
               position: "relative",
@@ -575,7 +554,7 @@ function Challenge() {
                 height: "100%",
                 objectFit: "cover",
                 display: "block",
-                minHeight: 520,
+                minHeight: 420,
                 transition: "transform 4s ease-in-out",
                 transform: breathe ? "scale(1.04)" : "scale(1.0)",
               }}

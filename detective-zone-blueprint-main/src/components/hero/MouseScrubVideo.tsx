@@ -1,4 +1,4 @@
-﻿import { useEffect, useRef } from "react";
+import { useEffect, useRef } from "react";
 
 function formatTime(seconds: number) {
   const s = Math.max(0, Math.floor(seconds || 0));
@@ -38,9 +38,23 @@ export function MouseScrubVideo({ src, className }: MouseScrubVideoProps) {
     if (!video || !wrapper) return;
 
     let scrubbing = false;
+    let isSeeking = false;
+    let idleTimer: any = null;
 
     const applyTime = (t: number) => {
-      try { video.currentTime = t; } catch { /* not seekable yet */ }
+      if (isSeeking && video.seeking) return;
+      isSeeking = true;
+      try {
+        if ("fastSeek" in video && typeof (video as any).fastSeek === "function") {
+          (video as any).fastSeek(t);
+        } else {
+          video.currentTime = t;
+        }
+      } catch {
+        /* ignore network seek delay */
+      } finally {
+        isSeeking = false;
+      }
     };
 
     const loop = () => {
@@ -50,14 +64,18 @@ export function MouseScrubVideo({ src, className }: MouseScrubVideoProps) {
       if (!Number.isFinite(d) || d <= 0) return;
 
       if (scrubbing) {
-        const next = video.currentTime + (targetTime.current - video.currentTime) * 0.08;
-        if (Math.abs(next - video.currentTime) > 0.0005) applyTime(next);
+        const current = video.currentTime;
+        const diff = targetTime.current - current;
+        if (Math.abs(diff) > 0.02) {
+          const next = current + diff * 0.22;
+          applyTime(Math.max(0, Math.min(d, next)));
+        }
       }
 
       // Update scrub UI directly on DOM — zero React re-renders
       const t = video.currentTime;
       if (timeRef.current) timeRef.current.textContent = formatTime(t);
-      if (durationRef.current && durationRef.current.textContent === "00:00") {
+      if (durationRef.current && (durationRef.current.textContent === "00:00" || !durationRef.current.textContent)) {
         durationRef.current.textContent = formatTime(d);
       }
       if (trackRef.current) {
@@ -72,7 +90,7 @@ export function MouseScrubVideo({ src, className }: MouseScrubVideoProps) {
       const inside =
         e.clientX >= rect.left &&
         e.clientX <= rect.right &&
-        e.clientY >= rect.top  &&
+        e.clientY >= rect.top &&
         e.clientY <= rect.bottom;
 
       if (!inside) {
@@ -88,9 +106,19 @@ export function MouseScrubVideo({ src, className }: MouseScrubVideoProps) {
         video.pause();
       }
 
-      // Right = 0% (start), Left = 100% (end)
-      const progress = 1 - (e.clientX - rect.left) / rect.width;
-      targetTime.current = Math.max(0, Math.min(1, progress)) * (video.duration || 0);
+      // Natural scrub: Left edge = 0% (start), Right edge = 100% (end)
+      const progress = (e.clientX - rect.left) / rect.width;
+      const d = video.duration || 0;
+      targetTime.current = Math.max(0, Math.min(1, progress)) * d;
+
+      // Reset auto-play resumption when idle
+      clearTimeout(idleTimer);
+      idleTimer = setTimeout(() => {
+        if (scrubbing) {
+          scrubbing = false;
+          video.play().catch(() => {});
+        }
+      }, 2000);
     };
 
     const onVisibility = () => {
@@ -110,6 +138,7 @@ export function MouseScrubVideo({ src, className }: MouseScrubVideoProps) {
     window.addEventListener("pointermove", onMove, { passive: true });
     document.addEventListener("visibilitychange", onVisibility);
     return () => {
+      clearTimeout(idleTimer);
       if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
       rafRef.current = null;
       window.removeEventListener("pointermove", onMove);

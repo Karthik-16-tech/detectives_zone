@@ -9,8 +9,8 @@ import { useEffect, useState } from "react";
  *   {loading && <DetectivePreloader onDone={() => setLoading(false)} />}
  */
 
-const SEARCH_MS = 2200;
-const SOLVED_MS = 700;
+const SEARCH_MS = 650;
+const SOLVED_MS = 250;
 
 const NOIR = "#141210";
 const CREAM = "#f2e9d8";

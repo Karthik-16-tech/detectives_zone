@@ -27,12 +27,14 @@ import {
   Zap,
 } from "lucide-react";
 
-import caseVoicemail from "@/assets/case-voicemail.png";
-import caseWitness from "@/assets/case-witness.png";
-import caseLetter from "@/assets/case-letter.png";
-import caseHeir from "@/assets/case-heir.png";
-import caseExperiment from "@/assets/case-experiment.png";
-import caseBetrayal from "@/assets/case-betrayal.png";
+import { S3_MEDIA } from "@/lib/media";
+
+const caseVoicemail = S3_MEDIA.cases.caseVoicemail;
+const caseWitness = S3_MEDIA.cases.caseWitness;
+const caseLetter = S3_MEDIA.cases.caseLetter;
+const caseHeir = S3_MEDIA.cases.caseHeir;
+const caseExperiment = S3_MEDIA.cases.caseExperiment;
+const caseBetrayal = S3_MEDIA.cases.caseBetrayal;
 
 export const Route = createFileRoute("/cases/")({
   component: CasesDashboard,
@@ -119,39 +121,70 @@ const initialCases = [
   },
 ];
 
+import { api } from "@/lib/api";
+import { useEffect } from "react";
+
 function CasesDashboard() {
   const [activeTab, setActiveTab] = useState<"ALL" | "UNSOLVED" | "COMPLETED" | "COMING SOON">("ALL");
+  const [liveCases, setLiveCases] = useState<any[]>(initialCases);
   const swiperRef = useRef<SwiperRef | null>(null);
   const prevBtn = useRef<HTMLButtonElement | null>(null);
   const nextBtn = useRef<HTMLButtonElement | null>(null);
 
+  // Live fetch from FastAPI backend
+  useEffect(() => {
+    api.getCases()
+      .then((data: any[]) => {
+        if (data && Array.isArray(data) && data.length > 0) {
+          const imageMap: Record<string, string> = {
+            "001": caseVoicemail,
+            "002": caseWitness,
+            "003": caseLetter,
+            "004": caseHeir,
+            "005": caseExperiment,
+            "006": caseBetrayal,
+          };
+          const mapped = data.map((c: any) => {
+            const num = c.case_number ? c.case_number.replace(/^CASE\s*/i, "") : "001";
+            const img = (c.cover_image && !c.cover_image.startsWith("/src")) 
+              ? c.cover_image 
+              : (imageMap[num] || imageMap[c.slug] || caseVoicemail);
+            return {
+              id: num,
+              dbId: c.id,
+              title: c.title,
+              number: c.case_number.startsWith("CASE") ? c.case_number : `CASE ${c.case_number}`,
+              status: c.status || "UNSOLVED",
+              image: img,
+              description: c.short_description || c.intro_text || "",
+              stars: c.rating ? Math.round(c.rating) : 5,
+              duration: c.estimated_duration || "3–5 HOURS",
+              difficulty: c.difficulty || "HARD",
+              rating: c.rating || 5,
+              dateAdded: new Date(c.created_at || Date.now()).getTime(),
+            };
+          });
+          setLiveCases(mapped);
+        }
+      })
+      .catch((err) => console.log("Using initial cases fallback:", err));
+  }, []);
+
   const filteredCases = useMemo(() => {
-    let result = [...initialCases];
+    let result = [...liveCases];
     if (activeTab !== "ALL") {
       result = result.filter((c) => c.status === activeTab);
     }
     result.sort((a, b) => a.id.localeCompare(b.id));
     return result;
-  }, [activeTab]);
+  }, [activeTab, liveCases]);
 
   return (
-    <div className="min-h-screen bg-[#050505] text-[#C7C7C7] font-sans pt-[72px] relative overflow-hidden">
-      {/* Subtle Noise / Grid Overlay */}
-      <div 
-        className="pointer-events-none absolute inset-0 z-0 opacity-[0.04]"
-        style={{
-          backgroundImage: `
-            linear-gradient(rgba(255, 255, 255, 1) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(255, 255, 255, 1) 1px, transparent 1px)
-          `,
-          backgroundSize: "40px 40px",
-        }}
-      />
-
+    <div className="min-h-screen bg-[#000000] text-[#C7C7C7] font-sans pt-[72px] relative overflow-hidden">
       <div className="relative z-10 mx-auto max-w-[1440px] px-4 py-10 sm:px-6 lg:px-8">
         
         {/* PAGE HEADER */}
-        <header className="flex flex-col md:flex-row justify-between items-start md:items-end border-b border-[#1A1A1A]/80 pb-7 mb-10 gap-4">
+        <header className="flex flex-col md:flex-row justify-between items-start md:items-end pb-7 mb-10 gap-4">
           <div>
             <h1 className="font-display text-[clamp(3.5rem,12vw,6.5rem)] font-bold text-white tracking-[2px] leading-none uppercase" style={{ fontFamily: "Bebas Neue, sans-serif" }}>
               Case <span className="text-[#B31217]">Files</span>
@@ -240,12 +273,17 @@ function CasesDashboard() {
 
                         {/* Status Badge */}
                         <span
-                          className={`absolute top-4 left-4 font-mono text-[8px] font-bold tracking-[0.2em] uppercase px-2.5 py-1 rounded-sm shadow-md transition-all duration-300 ${
+                          className={`absolute top-4 left-4 inline-flex items-center gap-1.5 font-mono text-[8px] font-bold tracking-[0.2em] uppercase px-2.5 py-1 rounded-[3px] border shadow-md backdrop-blur-md transition-all duration-300 ${
                             c.status === "UNSOLVED"
-                              ? "bg-[#B31217] text-white shadow-red-900/10 group-hover:shadow-[0_0_12px_#B31217]"
-                              : "bg-neutral-800 text-muted-foreground"
+                              ? "bg-black/90 text-[#FF4A50] border-[#C81D24]/60 shadow-[0_0_12px_rgba(200,29,36,0.35)]"
+                              : "bg-black/85 text-neutral-400 border-white/10 shadow-[0_0_8px_rgba(0,0,0,0.6)]"
                           }`}
                         >
+                          <span
+                            className={`inline-block w-1.5 h-1.5 rounded-full ${
+                              c.status === "UNSOLVED" ? "bg-[#C81D24] animate-pulse" : "bg-neutral-600"
+                            }`}
+                          />
                           {c.status === "UNSOLVED" ? "UNSOLVED" : "COMING SOON"}
                         </span>
                       </div>

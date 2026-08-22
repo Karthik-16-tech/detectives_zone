@@ -1,5 +1,5 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState, useEffect } from "react";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useState, useEffect, useRef } from "react";
 import {
   ShoppingCart,
   Trash2,
@@ -7,136 +7,387 @@ import {
   Minus,
   CheckCircle2,
   MapPin,
-  ShieldCheck,
   CreditCard,
   QrCode,
   Truck,
   ArrowRight,
   ChevronLeft,
-  Scan,
-  Sparkles,
   Lock,
   Phone,
   Mail,
   User,
-  Building,
-  Home,
   Check,
+  AlertCircle,
+  Package,
+  Clock,
+  ShieldCheck,
+  Send,
+  Radio,
+  CheckCircle,
   Copy,
+  ExternalLink,
+  RefreshCw,
+  XCircle,
+  MessageCircle,
 } from "lucide-react";
-import caseVoicemail from "@/assets/case-voicemail.png";
-
 import { useCart } from "@/context/CartContext";
+import { api } from "@/lib/api";
 
 export const Route = createFileRoute("/cart")({
   component: CartPage,
 });
 
-export function CartPage() {
-  const { items, updateQuantity, removeFromCart, subtotal } = useCart();
+interface PaymentData {
+  merchant_transaction_id: string;
+  order_id: number;
+  order_number: string;
+  amount: number;
+  currency: string;
+  upi_id: string;
+  qr_payload: string;
+  qr_image_url: string;
+  payment_url?: string;
+  status: string;
+  expires_in_seconds: number;
+}
 
-  const [coupon, setCoupon] = useState("");
-  const [discount, setDiscount] = useState(0);
-  const [couponApplied, setCouponApplied] = useState(false);
-  const [couponError, setCouponError] = useState("");
+function CartPage() {
+  const { items, updateQuantity, removeFromCart, clearCart, subtotal, totalCount } = useCart();
+  const navigate = useNavigate();
 
-  // Customer Form State with pre-filled defaults for instant 1-click checkout
-  const [formData, setFormData] = useState({
-    name: "Detective Agent",
-    email: "agent@detectivezone.com",
-    phone: "+91 98765 43210",
-    address: "221B Baker Street, Mystery Towers",
-    city: "Mumbai",
-    state: "Maharashtra",
-    pincode: "400001",
-    location: "Mumbai, Maharashtra, India (Verified)",
+  // Step state machine: cart -> checkout -> upi_qr -> confirmed / failed
+  const [step, setStep] = useState<"cart" | "checkout" | "upi_qr" | "payment_processing" | "confirmed" | "failed">("cart");
+
+  // Guest Delivery Details Form
+  const [deliveryForm, setDeliveryForm] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    address: "",
+    city: "",
+    state: "",
+    pincode: "",
+    country: "India",
   });
 
-  const [paymentMethod, setPaymentMethod] = useState<"upi" | "card" | "cod">("upi");
-  const [isLocating, setIsLocating] = useState(false);
+  // Payment Method: UPI (Default) or COD
+  const [paymentMethod, setPaymentMethod] = useState<"UPI" | "COD">("UPI");
+
+  // Active Order & PhonePe Transaction State
+  const [activeOrderId, setActiveOrderId] = useState<number | null>(null);
+  const [activeOrderNumber, setActiveOrderNumber] = useState<string>("");
+  const [paymentData, setPaymentData] = useState<PaymentData | null>(null);
+  const [timeLeft, setTimeLeft] = useState(600); // 10 minutes session
   const [copiedUpi, setCopiedUpi] = useState(false);
-  const [isCompleted, setIsCompleted] = useState(false);
-  const [scannedVerified, setScannedVerified] = useState(false);
 
-  const shipping = subtotal > 0 ? (subtotal >= 1499 ? 0 : 99) : 0;
-  const total = Math.max(0, subtotal - discount + shipping);
+  // Status & Verification state
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [verifyNotice, setVerifyNotice] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [confirmedOrder, setConfirmedOrder] = useState<any | null>(null);
 
-  const handleApplyCoupon = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (coupon.trim().toUpperCase() === "DETECTIVE10" || coupon.trim().toUpperCase() === "NOIR") {
-      const disc = Math.round(subtotal * 0.1);
-      setDiscount(disc);
-      setCouponApplied(true);
-      setCouponError("");
-    } else if (coupon.trim()) {
-      setCouponError("Invalid promo code. Try 'DETECTIVE10'");
+  const pollingTimerRef = useRef<any>(null);
+
+  // Financial calculations
+  const shippingFee = subtotal > 0 ? (subtotal >= 1499 ? 0 : 99) : 0;
+  const finalTotal = Math.max(0, subtotal + shippingFee);
+
+  // 10-Minute Countdown timer for active payment QR
+  useEffect(() => {
+    let timer: any;
+    if (step === "upi_qr" && timeLeft > 0) {
+      timer = setInterval(() => {
+        setTimeLeft((prev) => prev - 1);
+      }, 1000);
+    } else if (timeLeft === 0 && step === "upi_qr") {
+      setErrorMessage("Payment session timed out. Please initiate a new payment transaction.");
+      setStep("failed");
     }
+    return () => clearInterval(timer);
+  }, [step, timeLeft]);
+
+  // ═══════════════════════════════════════════════════════════════════
+  // AUTOMATIC SERVER-SIDE PAYMENT STATUS POLLING (Every 3.5 seconds)
+  // ═══════════════════════════════════════════════════════════════════
+  useEffect(() => {
+    if (step !== "upi_qr" || !paymentData?.merchant_transaction_id) {
+      if (pollingTimerRef.current) clearInterval(pollingTimerRef.current);
+      return;
+    }
+
+    let isPolling = true;
+
+    const pollPaymentStatus = async () => {
+      try {
+        const resp = await api.getPaymentStatus(paymentData.merchant_transaction_id);
+
+        if (!isPolling) return;
+
+        if (resp.payment_status === "PAID" || resp.order_status === "PAYMENT_CONFIRMED") {
+          // Backend verified payment! Stop polling and confirm order.
+          if (pollingTimerRef.current) clearInterval(pollingTimerRef.current);
+          isPolling = false;
+          clearCart();
+          setConfirmedOrder(resp);
+          setStep("confirmed");
+        } else if (resp.payment_status === "FAILED" || resp.payment_status === "EXPIRED") {
+          if (pollingTimerRef.current) clearInterval(pollingTimerRef.current);
+          isPolling = false;
+          setErrorMessage(resp.message || "Payment attempt failed or was declined.");
+          setStep("failed");
+        }
+      } catch (e) {
+        // Continue polling silently on transient network errors
+      }
+    };
+
+    // Initial check + interval polling
+    pollPaymentStatus();
+    pollingTimerRef.current = setInterval(pollPaymentStatus, 3500);
+
+    return () => {
+      isPolling = false;
+      if (pollingTimerRef.current) clearInterval(pollingTimerRef.current);
+    };
+  }, [step, paymentData]);
+
+  const formatTimer = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
   };
 
   const handleCopyUpi = () => {
-    navigator.clipboard.writeText("detectivezone@upi");
+    const upiToCopy = paymentData?.upi_id || "8885296645@ybl";
+    navigator.clipboard.writeText(upiToCopy);
     setCopiedUpi(true);
-    setTimeout(() => setCopiedUpi(false), 2000);
+    setTimeout(() => setCopiedUpi(false), 2500);
   };
 
-  const handleCompleteOrder = (e: React.FormEvent) => {
+  // ─── STEP 1 -> STEP 2: Initiate Checkout & Register PhonePe Payment ───
+  const handleProceedFromCheckout = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsCompleted(true);
-  };
+    setErrorMessage(null);
 
-  const handleAutoLocation = () => {
-    setIsLocating(true);
-    if ("geolocation" in navigator) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          setFormData((prev) => ({
-            ...prev,
-            location: `Lat: ${pos.coords.latitude.toFixed(4)}, Lng: ${pos.coords.longitude.toFixed(4)} (GPS Verified)`,
-          }));
-          setIsLocating(false);
-        },
-        () => {
-          setFormData((prev) => ({
-            ...prev,
-            location: "Connaught Place, New Delhi, India (Default)",
-          }));
-          setIsLocating(false);
-        },
-      );
-    } else {
-      setIsLocating(false);
+    // Address Validations
+    if (!deliveryForm.name.trim()) {
+      setErrorMessage("Please enter your Full Name.");
+      return;
+    }
+    if (!deliveryForm.email.trim() || !deliveryForm.email.includes("@")) {
+      setErrorMessage("Please enter a valid Email Address for order confirmation.");
+      return;
+    }
+    if (!deliveryForm.phone.trim() || deliveryForm.phone.trim().length < 8) {
+      setErrorMessage("Please enter a valid Phone Number for shipment updates.");
+      return;
+    }
+    if (!deliveryForm.address.trim()) {
+      setErrorMessage("Please enter your complete Street Address & Flat/House Number.");
+      return;
+    }
+    if (!deliveryForm.city.trim()) {
+      setErrorMessage("Please enter your City.");
+      return;
+    }
+    if (!deliveryForm.state.trim()) {
+      setErrorMessage("Please enter your State.");
+      return;
+    }
+    if (!deliveryForm.pincode.trim()) {
+      setErrorMessage("Please enter your 6-digit Postal PIN Code.");
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+
+      // 1. Create order in database with PENDING status
+      const orderPayload = {
+        customer_name: deliveryForm.name.trim(),
+        customer_email: deliveryForm.email.trim(),
+        customer_phone: deliveryForm.phone.trim(),
+        shipping_address: deliveryForm.address.trim(),
+        city: deliveryForm.city.trim(),
+        state: deliveryForm.state.trim(),
+        postal_code: deliveryForm.pincode.trim(),
+        country: deliveryForm.country.trim() || "India",
+        payment_method: paymentMethod,
+        items: items.map((item) => ({
+          product_id: typeof item.productId === "number" ? item.productId : (typeof item.id === "number" ? item.id : null),
+          item_title: item.title || "Detective Case Box",
+          sku: item.caseNumber || "DZ-CASE",
+          image_url: item.image || "",
+          unit_price: Number(item.price) || 999,
+          quantity: Number(item.quantity) || 1,
+        })),
+      };
+
+      const currentOrder = await api.createOrder(orderPayload);
+      if (currentOrder?.id) {
+        setActiveOrderId(currentOrder.id);
+        setActiveOrderNumber(currentOrder.order_number);
+      }
+
+      if (paymentMethod === "UPI") {
+        // 2. Register PhonePe payment transaction with unique merchant_transaction_id
+        const pData = await api.createPaymentTransaction({
+          order_id: currentOrder.id,
+          payment_method: "UPI",
+        });
+
+        setPaymentData(pData);
+        setTimeLeft(pData.expires_in_seconds || 600);
+        setVerifyNotice(null);
+        setStep("upi_qr");
+      } else if (paymentMethod === "COD") {
+        // Cash on Delivery direct flow — order already auto-confirmed by backend on creation
+        const verifiedOrder = await api.processOrderPayment(currentOrder.id, {
+          payment_method: "COD",
+        });
+        setConfirmedOrder(verifiedOrder);
+        clearCart();
+        setStep("confirmed");
+      }
+    } catch (err: any) {
+      const msg = typeof err === "string" ? err : (err?.message || JSON.stringify(err));
+      setErrorMessage(typeof msg === "string" ? msg : "Failed to initiate payment. Please try again.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  if (isCompleted) {
+  // ─── MANUAL "I've Completed Payment" VERIFICATION TRIGGER ───
+  // CRITICAL: Does NOT confirm on client. Directly checks backend status!
+  const handleManualVerificationCheck = async () => {
+    if (!paymentData?.merchant_transaction_id) return;
+    try {
+      setIsVerifying(true);
+      setVerifyNotice(null);
+
+      const resp = await api.getPaymentStatus(paymentData.merchant_transaction_id);
+
+      if (resp.payment_status === "PAID" || resp.order_status === "PAYMENT_CONFIRMED") {
+        // Confirmed by backend!
+        if (pollingTimerRef.current) clearInterval(pollingTimerRef.current);
+        clearCart();
+        setConfirmedOrder(resp);
+        setStep("confirmed");
+      } else if (resp.payment_status === "FAILED") {
+        setErrorMessage("Payment was reported as failed. Please try again.");
+        setStep("failed");
+      } else {
+        // Still pending
+        setVerifyNotice(
+          "Payment verification in progress. If you just authorized the UPI transaction in your banking app, please wait 5-10 seconds while the bank settlement confirms."
+        );
+      }
+    } catch (err: any) {
+      setVerifyNotice("Connecting to payment verification node. Please retry in a few seconds.");
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
+  // ═══════════════════════════════════════════════════════════════════
+  // VIEW: CONFIRMED ORDER RECEIPT (Backend Verified ONLY)
+  // ═══════════════════════════════════════════════════════════════════
+  if (step === "confirmed" && confirmedOrder) {
+    const isCod = confirmedOrder.payment_method === "COD";
+
     return (
-      <div className="min-h-screen bg-background pt-28 pb-20 px-4">
-        <div className="mx-auto max-w-2xl text-center rounded-2xl border border-blood/40 bg-card/90 p-8 sm:p-12 shadow-[0_0_50px_rgba(179,18,23,0.2)]">
-          <div className="mx-auto mb-6 flex size-16 items-center justify-center rounded-full bg-blood/20 text-blood">
-            <CheckCircle2 className="size-10" />
-          </div>
-          <p className="font-mono text-xs uppercase tracking-[0.3em] text-blood">Case Order Confirmed</p>
-          <h1 className="mt-2 font-display text-3xl sm:text-4xl uppercase font-bold text-foreground">
-            Your Investigation Kit is Dispatched
-          </h1>
-          <p className="mt-3 font-mono text-sm text-muted-foreground">
-            Order #DZ-{Math.floor(100000 + Math.random() * 900000)} has been successfully logged.
-          </p>
+      <div className="min-h-screen bg-black pt-28 pb-20 px-4">
+        <div className="mx-auto max-w-2xl rounded-2xl border border-white/10 bg-[#080808] p-6 sm:p-10 shadow-[0_0_60px_rgba(0,0,0,0.9)] backdrop-blur-md">
+          <div className="text-center">
+            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+              <CheckCircle2 className="h-8 w-8" />
+            </div>
 
-          <div className="mt-8 rounded-xl border border-border bg-surface/80 p-6 text-left font-mono text-xs space-y-2">
-            <p><span className="text-muted-foreground">Customer:</span> {formData.name}</p>
-            <p><span className="text-muted-foreground">Email:</span> {formData.email}</p>
-            <p><span className="text-muted-foreground">Address:</span> {formData.address}, {formData.city} - {formData.pincode}</p>
-            <p><span className="text-muted-foreground">Payment Method:</span> {paymentMethod.toUpperCase()} (VERIFIED)</p>
-            <p className="pt-2 border-t border-border/60 text-blood font-bold text-sm">Total Paid: ₹{total.toLocaleString()}</p>
+            {isCod ? (
+              <div className="space-y-1">
+                <span className="font-mono text-[11px] uppercase tracking-[0.2em] text-amber-400 font-bold bg-amber-500/10 border border-amber-500/30 px-3 py-1 rounded-full inline-block">
+                  Cash on Delivery Placed
+                </span>
+                <h1 className="mt-3 font-display text-2xl sm:text-3xl font-bold uppercase tracking-wider text-white">
+                  Order #{confirmedOrder.order_number}
+                </h1>
+                <p className="mt-2 font-mono text-xs text-white/70 max-w-md mx-auto leading-relaxed">
+                  Our dispatch team will contact you to verify delivery prior to dispatch.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-1">
+                <span className="font-mono text-[10px] uppercase tracking-[0.25em] text-emerald-400 font-bold bg-emerald-500/10 border border-emerald-500/30 px-3 py-1 rounded-full inline-block">
+                  ✓ Payment Confirmed & Verified
+                </span>
+                <h1 className="mt-2 font-display text-2xl sm:text-3xl font-bold uppercase tracking-wider text-white">
+                  Order #{confirmedOrder.order_number}
+                </h1>
+                <p className="mt-2 font-mono text-xs text-white/50">
+                  Your Detective Zone investigation dossier order is confirmed. A receipt has been dispatched to{" "}
+                  <span className="text-white font-bold">{confirmedOrder.customer_email || deliveryForm.email}</span>.
+                </p>
+              </div>
+            )}
           </div>
 
-          <div className="mt-8 flex justify-center gap-4">
-            <Link
-              to="/cases"
-              className="inline-flex items-center gap-2 rounded-lg bg-blood px-6 py-3 font-display text-xs uppercase tracking-widest text-white hover:bg-blood/90 transition-colors"
+          {/* Details Box */}
+          <div className="mt-8 rounded-xl border border-white/10 bg-black/80 p-6 space-y-3 font-mono text-xs">
+            <div className="flex justify-between pb-2 border-b border-white/10">
+              <span className="text-white/50">Order Number:</span>
+              <span className="text-white font-bold">#{confirmedOrder.order_number}</span>
+            </div>
+            <div className="flex justify-between pb-2 border-b border-white/10">
+              <span className="text-white/50">Payment Status:</span>
+              <span className="text-emerald-400 font-bold uppercase">
+                {isCod ? "PENDING (COD)" : "PAID ✓"}
+              </span>
+            </div>
+            <div className="flex justify-between pb-2 border-b border-white/10">
+              <span className="text-white/50">Payment Gateway:</span>
+              <span className="text-white font-bold">
+                {confirmedOrder.provider || "PhonePe UPI Gateway"}
+              </span>
+            </div>
+            {(confirmedOrder.merchant_transaction_id || confirmedOrder.transaction_id) && (
+              <div className="flex justify-between pb-2 border-b border-white/10">
+                <span className="text-white/50">Transaction ID:</span>
+                <span className="text-white font-mono text-[11px]">
+                  {confirmedOrder.merchant_transaction_id || confirmedOrder.transaction_id}
+                </span>
+              </div>
+            )}
+            <div className="flex justify-between pb-2 border-b border-white/10">
+              <span className="text-white/50">Recipient Name:</span>
+              <span className="text-white">{confirmedOrder.customer_name || deliveryForm.name}</span>
+            </div>
+            <div className="flex justify-between pt-1 text-sm font-bold">
+              <span className="text-white/70">Total Amount:</span>
+              <span className="text-[#C81D24] font-display text-lg">
+                ₹{confirmedOrder.amount || confirmedOrder.total_amount?.toLocaleString() || finalTotal.toLocaleString()}
+              </span>
+            </div>
+          </div>
+
+          <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
+            <a
+              href={`https://wa.me/916305729867?text=${encodeURIComponent(
+                `DETECTIVE ZONE — ORDER CONFIRMATION\n============================================================\nOrder Reference: #${confirmedOrder.order_number}\nAgent: ${confirmedOrder.customer_name || deliveryForm.name}\nMode: ${isCod ? "Cash on Delivery (COD)" : "Paid Online"}\nTotal: Rs. ${confirmedOrder.total_amount || confirmedOrder.amount || finalTotal}\n\nPlease share dispatch tracking updates for my order.\n============================================================`
+              )}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl bg-[#25D366] px-6 py-3.5 font-display text-xs font-bold uppercase tracking-wider text-black hover:bg-[#20ba59] transition-all shadow-[0_4px_20px_rgba(37,211,102,0.3)] cursor-pointer"
             >
-              Start Online Case Files <ArrowRight className="size-4" />
+              <MessageCircle className="h-4 w-4" />
+              <span>Receive Confirmation on WhatsApp</span>
+            </a>
+            <Link
+              to="/store"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl bg-[#C81D24] px-6 py-3.5 font-display text-xs font-bold uppercase tracking-wider text-white hover:bg-red-700 transition-all shadow-[0_0_20px_rgba(200,29,36,0.35)] cursor-pointer"
+            >
+              <Package className="h-4 w-4" />
+              <span>Return to Store</span>
             </Link>
           </div>
         </div>
@@ -144,451 +395,593 @@ export function CartPage() {
     );
   }
 
+  // ═══════════════════════════════════════════════════════════════════
+  // VIEW: PAYMENT FAILED / TIMED OUT
+  // ═══════════════════════════════════════════════════════════════════
+  if (step === "failed") {
+    return (
+      <div className="min-h-screen bg-black pt-28 pb-20 px-4">
+        <div className="mx-auto max-w-xl rounded-2xl border border-red-500/30 bg-[#080808] p-8 sm:p-10 shadow-[0_0_60px_rgba(200,29,36,0.25)] text-center space-y-5">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-red-500/20 text-red-400 border border-red-500/40">
+            <XCircle className="h-8 w-8" />
+          </div>
+          <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-red-400 font-bold bg-red-500/10 border border-red-500/30 px-3 py-1 rounded-full inline-block">
+            Payment Not Completed
+          </span>
+          <h2 className="font-display text-2xl font-bold uppercase tracking-wider text-white">
+            We Couldn't Confirm Your Payment
+          </h2>
+          <p className="font-mono text-xs text-white/60 max-w-md mx-auto leading-relaxed">
+            {errorMessage || "Your order has NOT been confirmed. No funds were debited, or the payment session timed out."}
+          </p>
+
+          <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-3">
+            <button
+              onClick={() => {
+                setErrorMessage(null);
+                setStep("checkout");
+              }}
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl bg-[#C81D24] px-6 py-3 font-display text-xs uppercase tracking-widest text-white hover:bg-red-700 transition-all cursor-pointer shadow-[0_0_20px_rgba(200,29,36,0.35)]"
+            >
+              <RefreshCw className="h-4 w-4" />
+              <span>Try Payment Again</span>
+            </button>
+            <Link
+              to="/cart"
+              onClick={() => setStep("cart")}
+              className="w-full sm:w-auto font-mono text-xs text-white/60 hover:text-white uppercase tracking-wider py-3 px-4"
+            >
+              Modify Cart Items
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════════════
+  // VIEW: PRODUCTION-READY PHONEPE UPI QR PAYMENT SCREEN
+  // ═══════════════════════════════════════════════════════════════════
+  if (step === "upi_qr" && paymentData) {
+    const upiIdDisplay = paymentData.upi_id || "8885296645@ybl";
+
+    return (
+      <div className="min-h-screen bg-black pt-24 pb-20 px-4">
+        <div className="mx-auto max-w-xl rounded-2xl border border-[#C81D24]/40 bg-[#0A0A0A] p-6 sm:p-8 shadow-[0_0_80px_rgba(200,29,36,0.35)] backdrop-blur-xl space-y-6">
+          
+          {/* Header Strip */}
+          <div className="flex items-center justify-between border-b border-white/10 pb-4">
+            <div className="flex items-center gap-3">
+              <div className="h-9 w-9 rounded-lg bg-[#C81D24]/20 border border-[#C81D24]/40 flex items-center justify-center text-[#FF4A50]">
+                <ShieldCheck className="h-5 w-5" />
+              </div>
+              <div>
+                <h3 className="font-display text-base font-bold uppercase tracking-wider text-white" style={{ fontFamily: "Bebas Neue, sans-serif" }}>
+                  PhonePe UPI Gateway
+                </h3>
+                <span className="font-mono text-[10px] text-white/50 tracking-wider uppercase block">
+                  Encrypted Real-Time Settlement Node
+                </span>
+              </div>
+            </div>
+
+            {/* Session Timer */}
+            <div className="flex items-center gap-1.5 rounded-full bg-[#C81D24]/20 border border-[#C81D24]/40 px-3 py-1 text-[#FF4A50] font-mono text-xs font-bold animate-pulse">
+              <Clock className="h-3.5 w-3.5" />
+              <span>Expires in {formatTimer(timeLeft)}</span>
+            </div>
+          </div>
+
+          {/* Amount Strip */}
+          <div className="flex items-center justify-between rounded-xl bg-black/90 border border-white/10 p-4 font-mono">
+            <div>
+              <span className="text-[10px] uppercase text-white/50 block">Order #{paymentData.order_number}</span>
+              <span className="font-display text-3xl font-bold text-[#FF4A50]" style={{ fontFamily: "Bebas Neue, sans-serif" }}>
+                ₹{paymentData.amount.toLocaleString()}
+              </span>
+            </div>
+            <div className="text-right">
+              <span className="text-[10px] uppercase tracking-wider text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-2.5 py-1 rounded-full font-bold inline-block">
+                ● Waiting for Payment...
+              </span>
+              <span className="text-[9px] text-white/40 block mt-1">Auto-checking every 3s</span>
+            </div>
+          </div>
+
+          {/* ═════════════════════════════════════════════════════════════
+              OFFICIAL UPI QR CODE CONTAINER
+          ═════════════════════════════════════════════════════════════ */}
+          <div className="flex flex-col items-center justify-center space-y-4 bg-black/70 border border-white/15 rounded-2xl p-6 sm:p-8">
+            <span className="font-mono text-[11px] uppercase tracking-wider text-white/70 font-semibold flex items-center gap-2">
+              <QrCode className="h-4 w-4 text-[#FF4A50]" />
+              Scan QR to Complete Payment
+            </span>
+
+            {/* QR Card */}
+            <div className="relative group p-4 bg-white rounded-2xl shadow-[0_0_40px_rgba(255,255,255,0.2)] flex items-center justify-center min-h-[240px] min-w-[240px]">
+              <img
+                src={paymentData.qr_image_url}
+                alt="PhonePe UPI QR Code"
+                className="h-56 w-56 object-contain rounded-lg"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = `https://quickchart.io/qr?size=240&text=${encodeURIComponent(paymentData.qr_payload)}`;
+                }}
+              />
+            </div>
+
+            <p className="font-mono text-xs text-white/80 text-center max-w-sm leading-relaxed">
+              Open <strong className="text-white">PhonePe</strong>, <strong className="text-white">Google Pay</strong>, <strong className="text-white">Paytm</strong>, or any UPI app on your phone and scan to pay.
+            </p>
+
+            {/* UPI ID Badge with 1-Click Copy */}
+            <div className="w-full max-w-sm flex items-center justify-between gap-2 rounded-xl border border-white/15 bg-black/90 p-3 font-mono text-xs">
+              <div className="min-w-0 flex-1">
+                <span className="text-[9px] uppercase text-white/40 block">Merchant UPI ID:</span>
+                <span className="text-white font-bold truncate block">{upiIdDisplay}</span>
+              </div>
+              <button
+                type="button"
+                onClick={handleCopyUpi}
+                className="flex items-center gap-1.5 rounded-lg border border-[#C81D24]/50 bg-[#C81D24]/20 px-3 py-1.5 text-[11px] font-bold uppercase text-[#FF4A50] hover:bg-[#C81D24]/30 transition-all cursor-pointer shrink-0"
+              >
+                {copiedUpi ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
+                <span>{copiedUpi ? "Copied!" : "Copy UPI"}</span>
+              </button>
+            </div>
+
+            {/* Mobile Deep Link Button if User is on Phone */}
+            <a
+              href={paymentData.qr_payload}
+              className="sm:hidden w-full flex items-center justify-center gap-2 rounded-xl bg-white/10 border border-white/20 p-3 font-mono text-xs text-white hover:bg-white/15 transition-all"
+            >
+              <ExternalLink className="h-3.5 w-3.5 text-[#FF4A50]" />
+              <span>Tap to Open in UPI App</span>
+            </a>
+          </div>
+
+          {/* Notice Banner */}
+          {verifyNotice && (
+            <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-4 font-mono text-xs text-amber-300 leading-relaxed animate-in fade-in">
+              {verifyNotice}
+            </div>
+          )}
+
+          {/* Action Buttons */}
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-3 border-t border-white/10">
+            <button
+              type="button"
+              onClick={() => {
+                if (pollingTimerRef.current) clearInterval(pollingTimerRef.current);
+                setStep("checkout");
+              }}
+              className="w-full sm:w-auto font-mono text-xs text-white/50 hover:text-white uppercase tracking-wider py-2 cursor-pointer"
+            >
+              Cancel / Change Method
+            </button>
+
+            {/* "I've Completed Payment" button triggers real status query */}
+            <button
+              type="button"
+              onClick={handleManualVerificationCheck}
+              disabled={isVerifying}
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl bg-[#C81D24] px-8 py-3.5 font-display text-xs uppercase tracking-widest text-white hover:bg-red-700 transition-all shadow-[0_0_25px_rgba(200,29,36,0.45)] cursor-pointer disabled:opacity-50"
+            >
+              {isVerifying ? (
+                <>
+                  <RefreshCw className="h-4 w-4 animate-spin" />
+                  <span>Verifying Transaction...</span>
+                </>
+              ) : (
+                <>
+                  <CheckCircle2 className="h-4 w-4" />
+                  <span>I've Completed Payment</span>
+                </>
+              )}
+            </button>
+          </div>
+
+        </div>
+      </div>
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════════════
+  // VIEW: PAYMENT PROCESSING LOADER
+  // ═══════════════════════════════════════════════════════════════════
+  if (step === "payment_processing") {
+    return (
+      <div className="min-h-screen bg-black pt-36 pb-20 px-4 text-center">
+        <div className="mx-auto max-w-md rounded-2xl border border-white/10 bg-[#080808] p-10 shadow-2xl">
+          <div className="mx-auto mb-6 h-12 w-12 rounded-full border-2 border-[#C81D24] border-t-transparent animate-spin" />
+          <h2 className="font-display text-xl uppercase font-bold text-white tracking-wider">
+            Confirming Your Order...
+          </h2>
+          <p className="mt-3 font-mono text-xs text-white/50">
+            Securely processing fulfillment and payment details. Please do not close or reload this page.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-background pt-24 pb-20 px-4 sm:px-6">
+    <div className="min-h-screen bg-black pt-24 pb-20 px-4 sm:px-6">
       <div className="mx-auto max-w-7xl">
-        {/* Header Breadcrumb */}
+        {/* Navigation Breadcrumb */}
         <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <Link
               to="/store"
-              className="inline-flex items-center gap-2 font-mono text-xs uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors"
+              className="inline-flex items-center gap-2 font-mono text-xs uppercase tracking-widest text-white/50 hover:text-white transition-colors cursor-pointer"
             >
-              <ChevronLeft className="size-4" /> Back to Store
+              <ChevronLeft className="h-4 w-4" /> Back to Store
             </Link>
-            <h1 className="mt-2 font-display text-2xl sm:text-4xl uppercase font-bold text-foreground tracking-wider flex items-center gap-3">
-              <ShoppingCart className="size-8 text-blood" /> Checkout & Cart
+            <h1 className="mt-2 font-display text-2xl sm:text-3xl uppercase font-bold text-white tracking-wider flex items-center gap-3">
+              <ShoppingCart className="h-7 w-7 text-[#C81D24]" />
+              {step === "checkout" ? "Delivery & Payment Checkout" : "Your Shopping Cart"}
             </h1>
           </div>
-          <span className="self-start sm:self-auto font-mono text-xs uppercase tracking-widest text-muted-foreground bg-surface border border-border px-3 py-1.5 rounded-full">
-            Shopify Checkout Node
-          </span>
+          <div className="flex items-center gap-2 font-mono text-xs">
+            <span className={`px-3 py-1 rounded-full border transition-colors ${step === "cart" ? "border-[#C81D24] bg-[#C81D24]/20 text-[#FF4A50] font-bold" : "border-white/10 text-white/40"}`}>
+              1. Cart Items
+            </span>
+            <span className="text-white/20">→</span>
+            <span className={`px-3 py-1 rounded-full border transition-colors ${step === "checkout" ? "border-[#C81D24] bg-[#C81D24]/20 text-[#FF4A50] font-bold" : "border-white/10 text-white/40"}`}>
+              2. Delivery & Payment
+            </span>
+          </div>
         </div>
 
+        {errorMessage && (
+          <div className="mb-6 flex items-center gap-3 rounded-xl border border-red-500/40 bg-red-500/10 p-4 font-mono text-xs text-red-400">
+            <AlertCircle className="h-5 w-5 shrink-0" />
+            <span>{errorMessage}</span>
+          </div>
+        )}
+
+        {/* ─── EMPTY CART STATE ─── */}
         {items.length === 0 ? (
-          <div className="rounded-2xl border border-border bg-card p-12 text-center">
-            <ShoppingCart className="mx-auto size-12 text-muted-foreground" />
-            <h2 className="mt-4 font-display text-xl uppercase font-bold">Your Cart is Empty</h2>
-            <p className="mt-2 font-mono text-xs text-muted-foreground">
-              Select a physical evidence kit or case file to proceed.
+          <div className="rounded-2xl border border-white/10 bg-[#080808] p-12 sm:p-16 text-center">
+            <ShoppingCart className="mx-auto h-12 w-12 text-white/20" />
+            <h2 className="mt-4 font-display text-xl uppercase font-bold text-white tracking-wider">Your Cart is Empty</h2>
+            <p className="mt-2 font-mono text-xs text-white/50 max-w-sm mx-auto">
+              You haven't added any physical case kits or evidence dossiers to your locker yet.
             </p>
             <Link
               to="/store"
-              className="mt-6 inline-flex items-center gap-2 rounded-lg bg-blood px-6 py-2.5 font-display text-xs uppercase tracking-widest text-white hover:bg-blood/90"
+              className="mt-6 inline-flex items-center gap-2 rounded-xl bg-[#C81D24] px-6 py-3 font-display text-xs uppercase tracking-widest text-white hover:bg-red-700 transition-all cursor-pointer"
             >
-              Explore Evidence Store
+              <span>Explore Evidence Store</span>
+              <ArrowRight className="h-4 w-4" />
             </Link>
           </div>
         ) : (
-          <form onSubmit={handleCompleteOrder} className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-            {/* Left Column: Cart Items + Customer Details */}
-            <div className="lg:col-span-7 space-y-8">
-              {/* Cart Items List */}
-              <div className="rounded-2xl border border-border bg-card p-6 shadow-lg">
-                <h2 className="font-display text-lg uppercase font-bold tracking-wider text-foreground mb-4 flex items-center justify-between">
-                  <span>Selected Case Kits ({items.length})</span>
-                  <span className="font-mono text-xs text-muted-foreground font-normal">Step 1 of 2</span>
-                </h2>
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+            
+            {/* ═════════════════════════════════════════════════════════════
+                LEFT COLUMN: CART ITEMS (STEP 1) OR CHECKOUT FORM (STEP 2)
+            ═════════════════════════════════════════════════════════════ */}
+            <div className="lg:col-span-8 space-y-6">
+              {step === "cart" ? (
+                <div className="rounded-2xl border border-white/10 bg-[#080808] p-6 space-y-4">
+                  <h3 className="font-display text-sm uppercase font-bold tracking-wider text-white pb-3 border-b border-white/10">
+                    Cart Items ({totalCount})
+                  </h3>
 
-                <div className="divide-y divide-border/60">
-                  {items.map((item) => (
-                    <div key={item.id} className="py-4 first:pt-0 last:pb-0 flex flex-col sm:flex-row items-start sm:items-center gap-4">
-                      <img
-                        src={item.image}
-                        alt={item.title}
-                        className="size-20 rounded-lg object-cover border border-border/80 shrink-0"
-                      />
-                      <div className="flex-1 min-w-0">
-                        <span className="font-mono text-[10px] uppercase tracking-widest text-blood font-bold">
-                          {item.caseNumber}
-                        </span>
-                        <h3 className="font-display text-base font-semibold text-foreground truncate">
-                          {item.title}
-                        </h3>
-                        <p className="font-mono text-xs text-muted-foreground mt-0.5">{item.type}</p>
-                        <p className="font-mono text-sm font-bold text-foreground mt-1">
-                          ₹{item.price.toLocaleString()}
-                        </p>
-                      </div>
-
-                      <div className="flex items-center gap-3 self-end sm:self-center">
-                        <div className="flex items-center rounded-lg border border-border bg-surface">
-                          <button
-                            type="button"
-                            onClick={() => updateQuantity(item.id, -1)}
-                            className="p-1.5 text-muted-foreground hover:text-foreground transition-colors"
-                          >
-                            <Minus className="size-3.5" />
-                          </button>
-                          <span className="px-3 font-mono text-xs font-bold text-foreground">
-                            {item.quantity}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => updateQuantity(item.id, 1)}
-                            className="p-1.5 text-muted-foreground hover:text-foreground transition-colors"
-                          >
-                            <Plus className="size-3.5" />
-                          </button>
+                  <div className="divide-y divide-white/[0.06]">
+                    {items.map((item) => (
+                      <div key={item.id} className="py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                        <div className="flex items-center gap-4 min-w-0">
+                          <img
+                            src={item.image}
+                            alt={item.title}
+                            className="h-16 w-16 rounded-xl object-cover border border-white/10 bg-black shrink-0"
+                          />
+                          <div className="min-w-0">
+                            <span className="font-display text-[10px] font-bold uppercase text-[#FF4A50] tracking-wider">
+                              {item.caseNumber}
+                            </span>
+                            <h4 className="font-display text-sm font-bold uppercase text-white truncate tracking-wide">
+                              {item.title}
+                            </h4>
+                            <span className="font-mono text-xs text-white/50">
+                              ₹{item.price.toLocaleString()} each
+                            </span>
+                          </div>
                         </div>
 
-                        <button
-                          type="button"
-                          onClick={() => removeFromCart(item.id)}
-                          className="p-2 text-muted-foreground hover:text-blood transition-colors"
-                          title="Remove item"
-                        >
-                          <Trash2 className="size-4" />
-                        </button>
+                        <div className="flex items-center justify-between w-full sm:w-auto gap-6 self-stretch sm:self-center">
+                          <div className="flex items-center gap-2 border border-white/10 bg-black/60 rounded-lg p-1">
+                            <button
+                              onClick={() => updateQuantity(item.id, -1)}
+                              aria-label="Decrease quantity"
+                              className="h-6 w-6 flex items-center justify-center text-white/60 hover:text-white cursor-pointer"
+                            >
+                              <Minus className="h-3 w-3" />
+                            </button>
+                            <span className="font-mono text-xs font-bold text-white px-2">
+                              {item.quantity}
+                            </span>
+                            <button
+                              onClick={() => updateQuantity(item.id, 1)}
+                              aria-label="Increase quantity"
+                              className="h-6 w-6 flex items-center justify-center text-white/60 hover:text-white cursor-pointer"
+                            >
+                              <Plus className="h-3 w-3" />
+                            </button>
+                          </div>
+
+                          <span className="font-display text-base font-bold text-white">
+                            ₹{(item.price * item.quantity).toLocaleString()}
+                          </span>
+
+                          <button
+                            onClick={() => removeFromCart(item.id)}
+                            title="Remove item"
+                            className="text-white/40 hover:text-red-400 p-1.5 transition-colors cursor-pointer"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="pt-4 flex items-center justify-between border-t border-white/10">
+                    <Link
+                      to="/store"
+                      className="font-mono text-xs text-white/60 hover:text-white inline-flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <ChevronLeft className="h-3.5 w-3.5" /> Continue Shopping
+                    </Link>
+                    <button
+                      onClick={() => setStep("checkout")}
+                      className="inline-flex items-center gap-2 rounded-xl bg-[#C81D24] px-6 py-3 font-display text-xs uppercase tracking-widest text-white hover:bg-red-700 transition-all shadow-[0_0_20px_rgba(200,29,36,0.35)] cursor-pointer"
+                    >
+                      <span>Proceed to Checkout</span>
+                      <ArrowRight className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                /* ─── STEP 2: CHECKOUT (GUEST DELIVERY & PAYMENT SELECTOR) ─── */
+                <form onSubmit={handleProceedFromCheckout} className="space-y-6">
+                  {/* Delivery Address Form */}
+                  <div className="rounded-2xl border border-white/10 bg-[#080808] p-6 space-y-4">
+                    <div className="flex items-center gap-2.5 pb-3 border-b border-white/10">
+                      <MapPin className="h-4 w-4 text-[#FF4A50]" />
+                      <h3 className="font-display text-sm uppercase font-bold tracking-wider text-white">
+                        Delivery & Shipping Address
+                      </h3>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 font-mono text-xs">
+                      <div>
+                        <label className="block text-white/70 mb-1.5 uppercase font-medium">
+                          Full Name <span className="text-[#FF4A50]">*</span>
+                        </label>
+                        <div className="relative">
+                          <User className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-white/40" />
+                          <input
+                            type="text"
+                            required
+                            value={deliveryForm.name}
+                            onChange={(e) => setDeliveryForm({ ...deliveryForm, name: e.target.value })}
+                            placeholder="Enter your full name"
+                            className="w-full rounded-xl border border-white/15 bg-black/70 py-2.5 pl-9 pr-3 text-white outline-none focus:border-[#C81D24]"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-white/70 mb-1.5 uppercase font-medium">
+                          Email Address <span className="text-[#FF4A50]">*</span>
+                        </label>
+                        <div className="relative">
+                          <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-white/40" />
+                          <input
+                            type="email"
+                            required
+                            value={deliveryForm.email}
+                            onChange={(e) => setDeliveryForm({ ...deliveryForm, email: e.target.value })}
+                            placeholder="your.email@example.com"
+                            className="w-full rounded-xl border border-white/15 bg-black/70 py-2.5 pl-9 pr-3 text-white outline-none focus:border-[#C81D24]"
+                          />
+                        </div>
                       </div>
                     </div>
-                  ))}
-                </div>
-              </div>
 
-              {/* Customer Details Form */}
-              <div className="rounded-2xl border border-border bg-card p-6 shadow-lg space-y-4">
-                <h2 className="font-display text-lg uppercase font-bold tracking-wider text-foreground flex items-center gap-2">
-                  <User className="size-5 text-blood" /> Shipping & Customer Details
-                </h2>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 font-mono text-xs">
+                      <div>
+                        <label className="block text-white/70 mb-1.5 uppercase font-medium">
+                          Phone Number <span className="text-[#FF4A50]">*</span>
+                        </label>
+                        <div className="relative">
+                          <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-white/40" />
+                          <input
+                            type="tel"
+                            required
+                            value={deliveryForm.phone}
+                            onChange={(e) => setDeliveryForm({ ...deliveryForm, phone: e.target.value })}
+                            placeholder="+91 98765 43210"
+                            className="w-full rounded-xl border border-white/15 bg-black/70 py-2.5 pl-9 pr-3 text-white outline-none focus:border-[#C81D24]"
+                          />
+                        </div>
+                      </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block font-mono text-xs uppercase tracking-wider text-muted-foreground mb-1">
-                      Full Name *
-                    </label>
-                    <div className="relative">
-                      <User className="absolute left-3 top-2.5 size-4 text-muted-foreground" />
-                      <input
-                        type="text"
+                      <div>
+                        <label className="block text-white/70 mb-1.5 uppercase font-medium">
+                          PIN Code <span className="text-[#FF4A50]">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          maxLength={6}
+                          value={deliveryForm.pincode}
+                          onChange={(e) => setDeliveryForm({ ...deliveryForm, pincode: e.target.value })}
+                          placeholder="e.g. 500081 or 400001"
+                          className="w-full rounded-xl border border-white/15 bg-black/70 py-2.5 px-3 text-white outline-none focus:border-[#C81D24]"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="font-mono text-xs">
+                      <label className="block text-white/70 mb-1.5 uppercase font-medium">
+                        Street Address, Flat / House No., Landmark <span className="text-[#FF4A50]">*</span>
+                      </label>
+                      <textarea
+                        rows={2}
                         required
-                        placeholder="Detective John Doe"
-                        value={formData.name}
-                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                        className="w-full rounded-lg border border-border bg-surface pl-10 pr-3 py-2 font-mono text-xs text-foreground focus:border-blood focus:outline-none"
+                        value={deliveryForm.address}
+                        onChange={(e) => setDeliveryForm({ ...deliveryForm, address: e.target.value })}
+                        placeholder="Flat 101, Galaxy Apartments, Road No. 5, Near City Park"
+                        className="w-full rounded-xl border border-white/15 bg-black/70 p-3 text-white outline-none focus:border-[#C81D24] resize-none"
                       />
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 font-mono text-xs">
+                      <div>
+                        <label className="block text-white/70 mb-1.5 uppercase font-medium">
+                          City <span className="text-[#FF4A50]">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          value={deliveryForm.city}
+                          onChange={(e) => setDeliveryForm({ ...deliveryForm, city: e.target.value })}
+                          placeholder="e.g. Hyderabad, Mumbai, Bangalore"
+                          className="w-full rounded-xl border border-white/15 bg-black/70 py-2.5 px-3 text-white outline-none focus:border-[#C81D24]"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-white/70 mb-1.5 uppercase font-medium">
+                          State <span className="text-[#FF4A50]">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          value={deliveryForm.state}
+                          onChange={(e) => setDeliveryForm({ ...deliveryForm, state: e.target.value })}
+                          placeholder="e.g. Telangana, Maharashtra, Karnataka"
+                          className="w-full rounded-xl border border-white/15 bg-black/70 py-2.5 px-3 text-white outline-none focus:border-[#C81D24]"
+                        />
+                      </div>
                     </div>
                   </div>
 
-                  <div>
-                    <label className="block font-mono text-xs uppercase tracking-wider text-muted-foreground mb-1">
-                      Email Address *
-                    </label>
-                    <div className="relative">
-                      <Mail className="absolute left-3 top-2.5 size-4 text-muted-foreground" />
-                      <input
-                        type="email"
-                        required
-                        placeholder="agent@detectivezone.com"
-                        value={formData.email}
-                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                        className="w-full rounded-lg border border-border bg-surface pl-10 pr-3 py-2 font-mono text-xs text-foreground focus:border-blood focus:outline-none"
-                      />
+                  {/* Payment Method Selector */}
+                  <div className="rounded-2xl border border-white/10 bg-[#080808] p-6 space-y-5">
+                    <div className="flex items-center gap-2.5 pb-3 border-b border-white/10">
+                      <QrCode className="h-4 w-4 text-[#FF4A50]" />
+                      <h3 className="font-display text-sm uppercase font-bold tracking-wider text-white">
+                        Select Payment Option
+                      </h3>
+                    </div>
+
+                    {/* Method Selector Tabs */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {[
+                        { id: "UPI", label: "PhonePe / UPI QR", sub: "Scan with PhonePe, GPay, Paytm, Any UPI", icon: QrCode },
+                        { id: "COD", label: "Cash on Delivery", sub: "Pay upon physical arrival & verification", icon: Truck },
+                      ].map((m) => (
+                        <button
+                          key={m.id}
+                          type="button"
+                          onClick={() => setPaymentMethod(m.id as any)}
+                          className={`flex flex-col gap-1 rounded-xl border p-4 text-left font-mono transition-all cursor-pointer ${
+                            paymentMethod === m.id
+                              ? "border-[#C81D24] bg-[#C81D24]/15 text-white shadow-[0_0_15px_rgba(200,29,36,0.25)]"
+                              : "border-white/10 bg-black/40 text-white/60 hover:border-white/20 hover:text-white"
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <m.icon className={`h-4 w-4 ${paymentMethod === m.id ? "text-[#FF4A50]" : "text-white/40"}`} />
+                            <div className={`h-3.5 w-3.5 rounded-full border flex items-center justify-center ${paymentMethod === m.id ? "border-[#C81D24] bg-[#C81D24]" : "border-white/20"}`}>
+                              {paymentMethod === m.id && <div className="h-1.5 w-1.5 rounded-full bg-white" />}
+                            </div>
+                          </div>
+                          <span className="font-bold text-xs text-white mt-2">{m.label}</span>
+                          <span className="text-[10px] text-white/40 leading-tight">{m.sub}</span>
+                        </button>
+                      ))}
                     </div>
                   </div>
 
-                  <div>
-                    <label className="block font-mono text-xs uppercase tracking-wider text-muted-foreground mb-1">
-                      Phone Number *
-                    </label>
-                    <div className="relative">
-                      <Phone className="absolute left-3 top-2.5 size-4 text-muted-foreground" />
-                      <input
-                        type="tel"
-                        required
-                        placeholder="+91 98765 43210"
-                        value={formData.phone}
-                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                        className="w-full rounded-lg border border-border bg-surface pl-10 pr-3 py-2 font-mono text-xs text-foreground focus:border-blood focus:outline-none"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block font-mono text-xs uppercase tracking-wider text-muted-foreground mb-1">
-                      Pincode *
-                    </label>
-                    <div className="relative">
-                      <Building className="absolute left-3 top-2.5 size-4 text-muted-foreground" />
-                      <input
-                        type="text"
-                        required
-                        placeholder="400001"
-                        value={formData.pincode}
-                        onChange={(e) => setFormData({ ...formData, pincode: e.target.value })}
-                        className="w-full rounded-lg border border-border bg-surface pl-10 pr-3 py-2 font-mono text-xs text-foreground focus:border-blood focus:outline-none"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block font-mono text-xs uppercase tracking-wider text-muted-foreground mb-1">
-                    Street Address / House No *
-                  </label>
-                  <div className="relative">
-                    <Home className="absolute left-3 top-2.5 size-4 text-muted-foreground" />
-                    <input
-                      type="text"
-                      required
-                      placeholder="Flat 4B, Mystery Towers, Baker Street"
-                      value={formData.address}
-                      onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                      className="w-full rounded-lg border border-border bg-surface pl-10 pr-3 py-2 font-mono text-xs text-foreground focus:border-blood focus:outline-none"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block font-mono text-xs uppercase tracking-wider text-muted-foreground mb-1">
-                      City
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="Mumbai"
-                      value={formData.city}
-                      onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                      className="w-full rounded-lg border border-border bg-surface px-3 py-2 font-mono text-xs text-foreground focus:border-blood focus:outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="block font-mono text-xs uppercase tracking-wider text-muted-foreground mb-1">
-                      State
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="Maharashtra"
-                      value={formData.state}
-                      onChange={(e) => setFormData({ ...formData, state: e.target.value })}
-                      className="w-full rounded-lg border border-border bg-surface px-3 py-2 font-mono text-xs text-foreground focus:border-blood focus:outline-none"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <label className="font-mono text-xs uppercase tracking-wider text-muted-foreground">
-                      GPS / Location Verification
-                    </label>
+                  {/* Submit Button */}
+                  <div className="flex items-center justify-between pt-2">
                     <button
                       type="button"
-                      onClick={handleAutoLocation}
-                      disabled={isLocating}
-                      className="inline-flex items-center gap-1 font-mono text-[10px] text-blood hover:underline uppercase"
+                      onClick={() => setStep("cart")}
+                      className="font-mono text-xs text-white/60 hover:text-white inline-flex items-center gap-1.5 cursor-pointer"
                     >
-                      <MapPin className="size-3" /> {isLocating ? "Locating..." : "Auto Detect Location"}
+                      <ChevronLeft className="h-3.5 w-3.5" /> Back to Cart
                     </button>
-                  </div>
-                  <input
-                    type="text"
-                    readOnly
-                    value={formData.location}
-                    className="w-full rounded-lg border border-border bg-surface/50 px-3 py-2 font-mono text-xs text-muted-foreground cursor-not-allowed"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Right Column: Order Summary + Payment & Scanner */}
-            <div className="lg:col-span-5 space-y-6">
-              {/* Payment Scanner & Method Selection */}
-              <div className="rounded-2xl border border-blood/30 bg-card p-6 shadow-xl relative overflow-hidden">
-                <div className="absolute top-0 right-0 p-3 opacity-10">
-                  <Scan className="size-32 text-blood" />
-                </div>
-
-                <h2 className="font-display text-lg uppercase font-bold tracking-wider text-foreground mb-4 flex items-center gap-2">
-                  <QrCode className="size-5 text-blood" /> Payment Method & QR Scanner
-                </h2>
-
-                {/* Tabs */}
-                <div className="grid grid-cols-3 gap-2 mb-6">
-                  <button
-                    type="button"
-                    onClick={() => setPaymentMethod("upi")}
-                    className={`py-2 px-2 rounded-lg font-mono text-xs uppercase text-center border transition-all ${
-                      paymentMethod === "upi"
-                        ? "border-blood bg-blood/10 text-foreground font-bold"
-                        : "border-border bg-surface text-muted-foreground hover:text-foreground"
-                    }`}
-                  >
-                    UPI / QR Scan
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setPaymentMethod("card")}
-                    className={`py-2 px-2 rounded-lg font-mono text-xs uppercase text-center border transition-all ${
-                      paymentMethod === "card"
-                        ? "border-blood bg-blood/10 text-foreground font-bold"
-                        : "border-border bg-surface text-muted-foreground hover:text-foreground"
-                    }`}
-                  >
-                    Card / Net
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setPaymentMethod("cod")}
-                    className={`py-2 px-2 rounded-lg font-mono text-xs uppercase text-center border transition-all ${
-                      paymentMethod === "cod"
-                        ? "border-blood bg-blood/10 text-foreground font-bold"
-                        : "border-border bg-surface text-muted-foreground hover:text-foreground"
-                    }`}
-                  >
-                    COD
-                  </button>
-                </div>
-
-                {/* QR Scanner Display for UPI */}
-                {paymentMethod === "upi" && (
-                  <div className="rounded-xl border border-border bg-surface p-4 text-center space-y-3">
-                    <p className="font-mono text-xs uppercase tracking-widest text-muted-foreground">
-                      Scan QR Code to Pay instantly
-                    </p>
-
-                    {/* Animated QR Code Graphic */}
-                    <div className="relative mx-auto size-44 rounded-xl border-2 border-blood/60 bg-white p-3 shadow-inner flex flex-col items-center justify-center">
-                      <div className="size-full bg-contain bg-no-repeat bg-center" style={{ backgroundImage: "url('https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=upi://pay?pa=detectivezone@upi&pn=DetectiveZone&am=999')" }} />
-                      <div className="absolute inset-0 border-2 border-dashed border-blood/40 rounded-xl pointer-events-none animate-pulse" />
-                    </div>
-
-                    <div className="flex items-center justify-center gap-2 font-mono text-xs text-foreground bg-card border border-border py-1.5 px-3 rounded-lg">
-                      <span className="text-muted-foreground">UPI ID:</span>
-                      <span className="font-bold">detectivezone@upi</span>
-                      <button
-                        type="button"
-                        onClick={handleCopyUpi}
-                        className="text-blood hover:text-blood/80 ml-1"
-                        title="Copy UPI ID"
-                      >
-                        {copiedUpi ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
-                      </button>
-                    </div>
-
-                    <p className="font-mono text-[10px] text-muted-foreground">
-                      Accepts Google Pay, PhonePe, Paytm, BHIM & all UPI apps
-                    </p>
 
                     <button
-                      type="button"
-                      onClick={() => setScannedVerified(true)}
-                      className={`w-full py-2 rounded-lg font-mono text-xs uppercase tracking-wider border transition-colors flex items-center justify-center gap-2 ${
-                        scannedVerified
-                          ? "bg-emerald-500/10 border-emerald-500/50 text-emerald-400 font-bold"
-                          : "border-border bg-card text-muted-foreground hover:text-foreground"
-                      }`}
+                      type="submit"
+                      disabled={isSubmitting}
+                      className="inline-flex items-center gap-2 rounded-xl bg-[#C81D24] px-8 py-3.5 font-display text-xs uppercase tracking-widest text-white hover:bg-red-700 transition-all shadow-[0_0_20px_rgba(200,29,36,0.35)] cursor-pointer disabled:opacity-50"
                     >
-                      {scannedVerified ? (
-                        <>
-                          <CheckCircle2 className="size-4 text-emerald-400" /> Payment QR Verified
-                        </>
-                      ) : (
-                        <>
-                          <Scan className="size-4 text-blood" /> Simulate Payment Scan
-                        </>
-                      )}
+                      <Lock className="h-3.5 w-3.5" />
+                      <span>{isSubmitting ? "Generating Payment Node..." : paymentMethod === "UPI" ? "Proceed to UPI Payment" : "Complete Order"}</span>
+                      <ArrowRight className="h-4 w-4" />
                     </button>
                   </div>
-                )}
-
-                {paymentMethod === "card" && (
-                  <div className="space-y-3 font-mono text-xs">
-                    <input
-                      type="text"
-                      placeholder="Card Number (4000 0000 0000 0000)"
-                      className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-foreground focus:border-blood focus:outline-none"
-                    />
-                    <div className="grid grid-cols-2 gap-2">
-                      <input
-                        type="text"
-                        placeholder="MM / YY"
-                        className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-foreground focus:border-blood focus:outline-none"
-                      />
-                      <input
-                        type="password"
-                        placeholder="CVV"
-                        className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-foreground focus:border-blood focus:outline-none"
-                      />
-                    </div>
-                  </div>
-                )}
-
-                {paymentMethod === "cod" && (
-                  <div className="p-3 rounded-lg border border-border bg-surface font-mono text-xs text-muted-foreground">
-                    Cash on Delivery available across 19,000+ Indian pincodes. Pay when your case box arrives.
-                  </div>
-                )}
-              </div>
-
-              {/* Order Summary */}
-              <div className="rounded-2xl border border-border bg-card p-6 shadow-xl space-y-4">
-                <h2 className="font-display text-lg uppercase font-bold tracking-wider text-foreground">
-                  Order Summary
-                </h2>
-
-                <form onSubmit={handleApplyCoupon} className="flex gap-2">
-                  <input
-                    type="text"
-                    placeholder="Promo Code (DETECTIVE10)"
-                    value={coupon}
-                    onChange={(e) => setCoupon(e.target.value)}
-                    className="flex-1 rounded-lg border border-border bg-surface px-3 py-2 font-mono text-xs text-foreground uppercase focus:border-blood focus:outline-none"
-                  />
-                  <button
-                    type="submit"
-                    className="rounded-lg bg-surface border border-border px-4 py-2 font-mono text-xs uppercase font-bold text-foreground hover:bg-border transition-colors"
-                  >
-                    Apply
-                  </button>
                 </form>
+              )}
+            </div>
 
-                {couponApplied && (
-                  <p className="font-mono text-xs text-emerald-400 flex items-center gap-1">
-                    <Sparkles className="size-3.5" /> 10% Detective Discount Applied!
-                  </p>
-                )}
-                {couponError && <p className="font-mono text-xs text-blood">{couponError}</p>}
+            {/* ═════════════════════════════════════════════════════════════
+                RIGHT COLUMN: ORDER SUMMARY SIDEBAR
+            ═════════════════════════════════════════════════════════════ */}
+            <div className="lg:col-span-4 space-y-6">
+              <div className="rounded-2xl border border-white/10 bg-[#080808] p-6 space-y-4 font-mono text-xs">
+                <h3 className="font-display text-sm uppercase font-bold tracking-wider text-white pb-3 border-b border-white/10">
+                  Order Summary
+                </h3>
 
-                <div className="border-t border-border pt-4 space-y-2 font-mono text-xs">
-                  <div className="flex justify-between text-muted-foreground">
-                    <span>Subtotal</span>
-                    <span>₹{subtotal.toLocaleString()}</span>
+                <div className="space-y-2.5 text-white/60">
+                  <div className="flex justify-between">
+                    <span>Subtotal ({totalCount} items)</span>
+                    <span className="text-white">₹{subtotal.toLocaleString()}</span>
                   </div>
-                  {discount > 0 && (
-                    <div className="flex justify-between text-emerald-400">
-                      <span>Discount</span>
-                      <span>-₹{discount.toLocaleString()}</span>
-                    </div>
-                  )}
-                  <div className="flex justify-between text-muted-foreground">
-                    <span>Shipping</span>
-                    <span>{shipping === 0 ? "FREE" : `₹${shipping}`}</span>
+
+                  <div className="flex justify-between">
+                    <span>Shipping Fee</span>
+                    <span className={shippingFee === 0 ? "text-emerald-400 font-bold" : "text-white"}>
+                      {shippingFee === 0 ? "FREE (Orders > ₹1,499)" : `₹${shippingFee}`}
+                    </span>
                   </div>
-                  <div className="border-t border-border/80 pt-3 flex justify-between text-sm font-bold text-foreground">
-                    <span>Total Amount</span>
-                    <span className="text-blood text-base">₹{total.toLocaleString()}</span>
+
+                  <div className="flex justify-between">
+                    <span>Estimated Tax</span>
+                    <span className="text-white">Included</span>
                   </div>
                 </div>
 
-                <button
-                  type="submit"
-                  className="w-full rounded-xl bg-blood py-3.5 font-display text-sm uppercase tracking-widest text-white shadow-lg shadow-blood/30 hover:bg-blood/90 transition-all flex items-center justify-center gap-2 group cursor-pointer"
-                >
-                  <Lock className="size-4" /> Place Order & Pay ₹{total.toLocaleString()}
-                  <ArrowRight className="size-4 group-hover:translate-x-1 transition-transform" />
-                </button>
+                <div className="pt-3 border-t border-white/10 flex justify-between items-center text-sm font-bold">
+                  <span className="text-white">Total Amount</span>
+                  <span className="text-[#FF4A50] font-display text-xl">
+                    ₹{finalTotal.toLocaleString()}
+                  </span>
+                </div>
 
-                <div className="pt-2 flex items-center justify-center gap-4 text-[10px] font-mono text-muted-foreground uppercase tracking-wider">
-                  <span className="flex items-center gap-1">
-                    <ShieldCheck className="size-3 text-emerald-400" /> SSL 256-Bit Encrypted
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <Truck className="size-3 text-blood" /> Dispatched in 24 Hrs
-                  </span>
+                <div className="pt-2">
+                  <div className="rounded-xl border border-white/10 bg-black/60 p-3 space-y-2 text-[10px] text-white/50">
+                    <div className="flex items-center gap-2 text-white/80 font-bold">
+                      <ShieldCheck className="h-3.5 w-3.5 text-[#FF4A50]" />
+                      <span>100% Encrypted & Authenticated</span>
+                    </div>
+                    <p>
+                      Payments verified via PhonePe Gateway with instant order confirmation and dispatch notification.
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
-          </form>
+
+          </div>
         )}
       </div>
     </div>

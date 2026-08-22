@@ -17,8 +17,24 @@ import { Route as ChallengeRouteImport } from './routes/challenge'
 import { Route as ContactRouteImport } from './routes/contact'
 import { Route as EvidenceWallRouteImport } from './routes/evidence-wall'
 import { Route as StoreRouteImport } from './routes/store'
+import { Route as AdminIndexRouteImport } from './routes/admin/index'
+import { Route as AdminCasesRouteImport } from './routes/admin/cases'
+import { Route as AdminContactRouteImport } from './routes/admin/contact'
+import { Route as AdminInboxRouteImport } from './routes/admin/inbox'
+import { Route as AdminKitsRouteImport } from './routes/admin/kits'
+import { Route as AdminLoginRouteImport } from './routes/admin/login'
+import { Route as AdminMediaRouteImport } from './routes/admin/media'
+import { Route as AdminOrdersRouteImport } from './routes/admin/orders'
+import { Route as AdminPagesRouteImport } from './routes/admin/pages'
+import { Route as AdminPaymentsRouteImport } from './routes/admin/payments'
+import { Route as AdminSettingsRouteImport } from './routes/admin/settings'
+import { Route as AdminStoreRouteImport } from './routes/admin/store'
+import { Route as AdminWhatsappRouteImport } from './routes/admin/whatsapp'
 import { Route as CasesIndexRouteImport } from './routes/cases/index'
 import { Route as CasesCaseIdRouteImport } from './routes/cases.$caseId'
+import { Route as OrdersIndexRouteImport } from './routes/orders.index'
+import { Route as OrdersOrderIdRouteImport } from './routes/orders.$orderId'
+import { Route as AdminCasesCaseIdRouteImport } from './routes/admin/cases.$caseId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -60,6 +76,71 @@ const StoreRoute = StoreRouteImport.update({
   path: '/store',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminIndexRoute = AdminIndexRouteImport.update({
+  id: '/admin/',
+  path: '/admin/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminCasesRoute = AdminCasesRouteImport.update({
+  id: '/admin/cases',
+  path: '/admin/cases',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminContactRoute = AdminContactRouteImport.update({
+  id: '/admin/contact',
+  path: '/admin/contact',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminInboxRoute = AdminInboxRouteImport.update({
+  id: '/admin/inbox',
+  path: '/admin/inbox',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminKitsRoute = AdminKitsRouteImport.update({
+  id: '/admin/kits',
+  path: '/admin/kits',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminLoginRoute = AdminLoginRouteImport.update({
+  id: '/admin/login',
+  path: '/admin/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminMediaRoute = AdminMediaRouteImport.update({
+  id: '/admin/media',
+  path: '/admin/media',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminOrdersRoute = AdminOrdersRouteImport.update({
+  id: '/admin/orders',
+  path: '/admin/orders',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminPagesRoute = AdminPagesRouteImport.update({
+  id: '/admin/pages',
+  path: '/admin/pages',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminPaymentsRoute = AdminPaymentsRouteImport.update({
+  id: '/admin/payments',
+  path: '/admin/payments',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminSettingsRoute = AdminSettingsRouteImport.update({
+  id: '/admin/settings',
+  path: '/admin/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminStoreRoute = AdminStoreRouteImport.update({
+  id: '/admin/store',
+  path: '/admin/store',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminWhatsappRoute = AdminWhatsappRouteImport.update({
+  id: '/admin/whatsapp',
+  path: '/admin/whatsapp',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CasesIndexRoute = CasesIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -69,6 +150,21 @@ const CasesCaseIdRoute = CasesCaseIdRouteImport.update({
   id: '/$caseId',
   path: '/$caseId',
   getParentRoute: () => CasesRoute,
+} as any)
+const OrdersIndexRoute = OrdersIndexRouteImport.update({
+  id: '/orders/',
+  path: '/orders/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OrdersOrderIdRoute = OrdersOrderIdRouteImport.update({
+  id: '/orders/$orderId',
+  path: '/orders/$orderId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminCasesCaseIdRoute = AdminCasesCaseIdRouteImport.update({
+  id: '/$caseId',
+  path: '/$caseId',
+  getParentRoute: () => AdminCasesRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
@@ -80,8 +176,24 @@ export interface FileRoutesByFullPath {
   '/contact': typeof ContactRoute
   '/evidence-wall': typeof EvidenceWallRoute
   '/store': typeof StoreRoute
+  '/admin/cases': typeof AdminCasesRouteWithChildren
+  '/admin/contact': typeof AdminContactRoute
+  '/admin/inbox': typeof AdminInboxRoute
+  '/admin/kits': typeof AdminKitsRoute
+  '/admin/login': typeof AdminLoginRoute
+  '/admin/media': typeof AdminMediaRoute
+  '/admin/orders': typeof AdminOrdersRoute
+  '/admin/pages': typeof AdminPagesRoute
+  '/admin/payments': typeof AdminPaymentsRoute
+  '/admin/settings': typeof AdminSettingsRoute
+  '/admin/store': typeof AdminStoreRoute
+  '/admin/whatsapp': typeof AdminWhatsappRoute
   '/cases/$caseId': typeof CasesCaseIdRoute
+  '/orders/$orderId': typeof OrdersOrderIdRoute
+  '/admin/': typeof AdminIndexRoute
   '/cases/': typeof CasesIndexRoute
+  '/orders/': typeof OrdersIndexRoute
+  '/admin/cases/$caseId': typeof AdminCasesCaseIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -91,8 +203,24 @@ export interface FileRoutesByTo {
   '/contact': typeof ContactRoute
   '/evidence-wall': typeof EvidenceWallRoute
   '/store': typeof StoreRoute
+  '/admin/cases': typeof AdminCasesRouteWithChildren
+  '/admin/contact': typeof AdminContactRoute
+  '/admin/inbox': typeof AdminInboxRoute
+  '/admin/kits': typeof AdminKitsRoute
+  '/admin/login': typeof AdminLoginRoute
+  '/admin/media': typeof AdminMediaRoute
+  '/admin/orders': typeof AdminOrdersRoute
+  '/admin/pages': typeof AdminPagesRoute
+  '/admin/payments': typeof AdminPaymentsRoute
+  '/admin/settings': typeof AdminSettingsRoute
+  '/admin/store': typeof AdminStoreRoute
+  '/admin/whatsapp': typeof AdminWhatsappRoute
   '/cases/$caseId': typeof CasesCaseIdRoute
+  '/orders/$orderId': typeof OrdersOrderIdRoute
+  '/admin': typeof AdminIndexRoute
   '/cases': typeof CasesIndexRoute
+  '/orders': typeof OrdersIndexRoute
+  '/admin/cases/$caseId': typeof AdminCasesCaseIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -104,8 +232,24 @@ export interface FileRoutesById {
   '/contact': typeof ContactRoute
   '/evidence-wall': typeof EvidenceWallRoute
   '/store': typeof StoreRoute
+  '/admin/cases': typeof AdminCasesRouteWithChildren
+  '/admin/contact': typeof AdminContactRoute
+  '/admin/inbox': typeof AdminInboxRoute
+  '/admin/kits': typeof AdminKitsRoute
+  '/admin/login': typeof AdminLoginRoute
+  '/admin/media': typeof AdminMediaRoute
+  '/admin/orders': typeof AdminOrdersRoute
+  '/admin/pages': typeof AdminPagesRoute
+  '/admin/payments': typeof AdminPaymentsRoute
+  '/admin/settings': typeof AdminSettingsRoute
+  '/admin/store': typeof AdminStoreRoute
+  '/admin/whatsapp': typeof AdminWhatsappRoute
   '/cases/$caseId': typeof CasesCaseIdRoute
+  '/orders/$orderId': typeof OrdersOrderIdRoute
+  '/admin/': typeof AdminIndexRoute
   '/cases/': typeof CasesIndexRoute
+  '/orders/': typeof OrdersIndexRoute
+  '/admin/cases/$caseId': typeof AdminCasesCaseIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -118,8 +262,24 @@ export interface FileRouteTypes {
     | '/contact'
     | '/evidence-wall'
     | '/store'
+    | '/admin/cases'
+    | '/admin/contact'
+    | '/admin/inbox'
+    | '/admin/kits'
+    | '/admin/login'
+    | '/admin/media'
+    | '/admin/orders'
+    | '/admin/pages'
+    | '/admin/payments'
+    | '/admin/settings'
+    | '/admin/store'
+    | '/admin/whatsapp'
     | '/cases/$caseId'
+    | '/orders/$orderId'
+    | '/admin/'
     | '/cases/'
+    | '/orders/'
+    | '/admin/cases/$caseId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -129,8 +289,24 @@ export interface FileRouteTypes {
     | '/contact'
     | '/evidence-wall'
     | '/store'
+    | '/admin/cases'
+    | '/admin/contact'
+    | '/admin/inbox'
+    | '/admin/kits'
+    | '/admin/login'
+    | '/admin/media'
+    | '/admin/orders'
+    | '/admin/pages'
+    | '/admin/payments'
+    | '/admin/settings'
+    | '/admin/store'
+    | '/admin/whatsapp'
     | '/cases/$caseId'
+    | '/orders/$orderId'
+    | '/admin'
     | '/cases'
+    | '/orders'
+    | '/admin/cases/$caseId'
   id:
     | '__root__'
     | '/'
@@ -141,8 +317,24 @@ export interface FileRouteTypes {
     | '/contact'
     | '/evidence-wall'
     | '/store'
+    | '/admin/cases'
+    | '/admin/contact'
+    | '/admin/inbox'
+    | '/admin/kits'
+    | '/admin/login'
+    | '/admin/media'
+    | '/admin/orders'
+    | '/admin/pages'
+    | '/admin/payments'
+    | '/admin/settings'
+    | '/admin/store'
+    | '/admin/whatsapp'
     | '/cases/$caseId'
+    | '/orders/$orderId'
+    | '/admin/'
     | '/cases/'
+    | '/orders/'
+    | '/admin/cases/$caseId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -154,6 +346,21 @@ export interface RootRouteChildren {
   ContactRoute: typeof ContactRoute
   EvidenceWallRoute: typeof EvidenceWallRoute
   StoreRoute: typeof StoreRoute
+  AdminCasesRoute: typeof AdminCasesRouteWithChildren
+  AdminContactRoute: typeof AdminContactRoute
+  AdminInboxRoute: typeof AdminInboxRoute
+  AdminKitsRoute: typeof AdminKitsRoute
+  AdminLoginRoute: typeof AdminLoginRoute
+  AdminMediaRoute: typeof AdminMediaRoute
+  AdminOrdersRoute: typeof AdminOrdersRoute
+  AdminPagesRoute: typeof AdminPagesRoute
+  AdminPaymentsRoute: typeof AdminPaymentsRoute
+  AdminSettingsRoute: typeof AdminSettingsRoute
+  AdminStoreRoute: typeof AdminStoreRoute
+  AdminWhatsappRoute: typeof AdminWhatsappRoute
+  OrdersOrderIdRoute: typeof OrdersOrderIdRoute
+  AdminIndexRoute: typeof AdminIndexRoute
+  OrdersIndexRoute: typeof OrdersIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -214,6 +421,97 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StoreRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/': {
+      id: '/admin/'
+      path: '/admin'
+      fullPath: '/admin/'
+      preLoaderRoute: typeof AdminIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/cases': {
+      id: '/admin/cases'
+      path: '/admin/cases'
+      fullPath: '/admin/cases'
+      preLoaderRoute: typeof AdminCasesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/contact': {
+      id: '/admin/contact'
+      path: '/admin/contact'
+      fullPath: '/admin/contact'
+      preLoaderRoute: typeof AdminContactRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/inbox': {
+      id: '/admin/inbox'
+      path: '/admin/inbox'
+      fullPath: '/admin/inbox'
+      preLoaderRoute: typeof AdminInboxRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/kits': {
+      id: '/admin/kits'
+      path: '/admin/kits'
+      fullPath: '/admin/kits'
+      preLoaderRoute: typeof AdminKitsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/login': {
+      id: '/admin/login'
+      path: '/admin/login'
+      fullPath: '/admin/login'
+      preLoaderRoute: typeof AdminLoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/media': {
+      id: '/admin/media'
+      path: '/admin/media'
+      fullPath: '/admin/media'
+      preLoaderRoute: typeof AdminMediaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/orders': {
+      id: '/admin/orders'
+      path: '/admin/orders'
+      fullPath: '/admin/orders'
+      preLoaderRoute: typeof AdminOrdersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/pages': {
+      id: '/admin/pages'
+      path: '/admin/pages'
+      fullPath: '/admin/pages'
+      preLoaderRoute: typeof AdminPagesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/payments': {
+      id: '/admin/payments'
+      path: '/admin/payments'
+      fullPath: '/admin/payments'
+      preLoaderRoute: typeof AdminPaymentsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/settings': {
+      id: '/admin/settings'
+      path: '/admin/settings'
+      fullPath: '/admin/settings'
+      preLoaderRoute: typeof AdminSettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/store': {
+      id: '/admin/store'
+      path: '/admin/store'
+      fullPath: '/admin/store'
+      preLoaderRoute: typeof AdminStoreRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/whatsapp': {
+      id: '/admin/whatsapp'
+      path: '/admin/whatsapp'
+      fullPath: '/admin/whatsapp'
+      preLoaderRoute: typeof AdminWhatsappRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/cases/': {
       id: '/cases/'
       path: '/'
@@ -227,6 +525,27 @@ declare module '@tanstack/react-router' {
       fullPath: '/cases/$caseId'
       preLoaderRoute: typeof CasesCaseIdRouteImport
       parentRoute: typeof CasesRoute
+    }
+    '/orders/': {
+      id: '/orders/'
+      path: '/orders'
+      fullPath: '/orders/'
+      preLoaderRoute: typeof OrdersIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/orders/$orderId': {
+      id: '/orders/$orderId'
+      path: '/orders/$orderId'
+      fullPath: '/orders/$orderId'
+      preLoaderRoute: typeof OrdersOrderIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/cases/$caseId': {
+      id: '/admin/cases/$caseId'
+      path: '/$caseId'
+      fullPath: '/admin/cases/$caseId'
+      preLoaderRoute: typeof AdminCasesCaseIdRouteImport
+      parentRoute: typeof AdminCasesRoute
     }
   }
 }
@@ -243,6 +562,18 @@ const CasesRouteChildren: CasesRouteChildren = {
 
 const CasesRouteWithChildren = CasesRoute._addFileChildren(CasesRouteChildren)
 
+interface AdminCasesRouteChildren {
+  AdminCasesCaseIdRoute: typeof AdminCasesCaseIdRoute
+}
+
+const AdminCasesRouteChildren: AdminCasesRouteChildren = {
+  AdminCasesCaseIdRoute: AdminCasesCaseIdRoute,
+}
+
+const AdminCasesRouteWithChildren = AdminCasesRoute._addFileChildren(
+  AdminCasesRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AboutRoute: AboutRoute,
@@ -252,6 +583,21 @@ const rootRouteChildren: RootRouteChildren = {
   ContactRoute: ContactRoute,
   EvidenceWallRoute: EvidenceWallRoute,
   StoreRoute: StoreRoute,
+  AdminCasesRoute: AdminCasesRouteWithChildren,
+  AdminContactRoute: AdminContactRoute,
+  AdminInboxRoute: AdminInboxRoute,
+  AdminKitsRoute: AdminKitsRoute,
+  AdminLoginRoute: AdminLoginRoute,
+  AdminMediaRoute: AdminMediaRoute,
+  AdminOrdersRoute: AdminOrdersRoute,
+  AdminPagesRoute: AdminPagesRoute,
+  AdminPaymentsRoute: AdminPaymentsRoute,
+  AdminSettingsRoute: AdminSettingsRoute,
+  AdminStoreRoute: AdminStoreRoute,
+  AdminWhatsappRoute: AdminWhatsappRoute,
+  OrdersOrderIdRoute: OrdersOrderIdRoute,
+  AdminIndexRoute: AdminIndexRoute,
+  OrdersIndexRoute: OrdersIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

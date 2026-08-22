@@ -1,5 +1,5 @@
 import { ArrowRight } from "lucide-react";
-import noirImage from "@/assets/case-voicemail.png";
+import noirImage from "@/assets/cases/case-voicemail.png";
 import { AudioPlayer } from "@/components/AudioPlayer";
 import { CaseStamp } from "@/components/CaseStamp";
 import { PaperClip } from "@/components/PaperClip";

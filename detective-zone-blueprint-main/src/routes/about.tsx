@@ -10,17 +10,19 @@ import {
   ScrollText,
 } from "lucide-react";
 
+import { useState, useEffect } from "react";
+import { api } from "@/lib/api";
+
 import { Atmosphere } from "@/components/noir/Atmosphere";
 import { Reveal } from "@/components/noir/Reveal";
+import { S3_MEDIA } from "@/lib/media";
 
-import detectiveAlley from "@/assets/about/detective-alley.jpg";
-import evidenceBoard from "@/assets/about/evidence-board.jpg";
-import believeCrimeScene from "@/assets/about/believe-crime-scene.jpg";
-import believeEye from "@/assets/about/believe-eye.jpg";
-import ctaDesk from "@/assets/about/cta-desk.jpg";
-
-const believeClues =
-  "https://id-preview--26375558-b9ae-44e4-bf16-63e5f1373a20.lovable.app/__l5e/assets-v1/2cd5970d-3c3d-4183-9c9d-d3dbc2ebce8e/believe-clues.jpg";
+const detectiveAlley = S3_MEDIA.about.detectiveAlley;
+const evidenceBoard = S3_MEDIA.about.evidenceBoard;
+const believeCrimeScene = S3_MEDIA.about.believeCrimeScene;
+const believeEye = S3_MEDIA.about.believeEye;
+const ctaDesk = S3_MEDIA.about.ctaDesk;
+const believeClues = S3_MEDIA.about.evidenceBoard;
 
 export const Route = createFileRoute("/about")({
   head: () => ({
@@ -92,6 +94,14 @@ const BELIEFS = [
 ];
 
 function AboutPage() {
+  const [cmsSettings, setCmsSettings] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    api.getSettings().then((data) => {
+      if (data) setCmsSettings(data);
+    }).catch(() => {});
+  }, []);
+
   return (
     <div className="about-noir noir-grain relative min-h-screen max-w-full overflow-x-clip bg-background">
       <Atmosphere />
@@ -116,9 +126,13 @@ function AboutPage() {
 
             <div className="mt-10 max-w-xl space-y-5">
               <p className="font-display text-2xl tracking-[0.12em] text-foreground">
-                WE CREATE MYSTERIES.
-                <br />
-                <span className="text-primary">YOU SOLVE THEM.</span>
+                {cmsSettings.about_page_headline || (
+                  <>
+                    WE CREATE MYSTERIES.
+                    <br />
+                    <span className="text-primary">YOU SOLVE THEM.</span>
+                  </>
+                )}
               </p>
               <p className="text-sm leading-relaxed text-muted-foreground">
                 <strong className="text-primary">Detectives Zone</strong> is an immersive detective
@@ -142,7 +156,7 @@ function AboutPage() {
           <div className="relative">
             <div className="float-slow relative overflow-hidden border border-border/70">
               <img
-                src={detectiveAlley}
+                src={cmsSettings.about_alley_image || detectiveAlley}
                 alt="Detective in a trench coat and fedora standing in a rainy alley at night"
                 width={912}
                 height={1408}
@@ -152,7 +166,7 @@ function AboutPage() {
 
             <div className="absolute -right-2 top-8 hidden w-[42%] rotate-1 border border-border/60 shadow-[0_30px_80px_-30px_rgb(0_0_0/0.95)] md:block">
               <img
-                src={evidenceBoard}
+                src={cmsSettings.about_board_image || evidenceBoard}
                 alt="Evidence board with pinned photographs, maps, fingerprints and red connecting strings"
                 width={704}
                 height={1200}

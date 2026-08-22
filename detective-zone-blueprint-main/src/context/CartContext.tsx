@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState } from "react";
 
 export interface CartItem {
   id: string;
+  productId?: number;
   title: string;
   caseNumber: string;
   price: number;
@@ -23,42 +24,61 @@ interface CartContextType {
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
-  const [items, setItems] = useState<CartItem[]>([]);
+  const [items, setItems] = useState<CartItem[]>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem("dz_cart_items");
+        return saved ? JSON.parse(saved) : [];
+      } catch {
+        return [];
+      }
+    }
+    return [];
+  });
+
+  const saveItems = (newItems: CartItem[]) => {
+    setItems(newItems);
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem("dz_cart_items", JSON.stringify(newItems));
+      } catch {
+        // ignore
+      }
+    }
+  };
 
   const addToCart = (newItem: Omit<CartItem, "quantity">) => {
-    setItems((prev) => {
-      const existingIndex = prev.findIndex((i) => i.id === newItem.id);
-      if (existingIndex > -1) {
-        const existing = prev[existingIndex];
-        if (!existing) return prev;
-        return prev.map((item, idx) =>
-          idx === existingIndex ? { ...item, quantity: item.quantity + 1 } : item,
-        );
-      }
-      return [...prev, { ...newItem, quantity: 1 }];
-    });
+    const existingIndex = items.findIndex((i) => i.id === newItem.id);
+    let nextItems: CartItem[];
+    if (existingIndex > -1) {
+      nextItems = items.map((item, idx) =>
+        idx === existingIndex ? { ...item, quantity: item.quantity + 1 } : item,
+      );
+    } else {
+      nextItems = [...items, { ...newItem, quantity: 1 }];
+    }
+    saveItems(nextItems);
   };
 
   const removeFromCart = (id: string) => {
-    setItems((prev) => prev.filter((i) => i.id !== id));
+    saveItems(items.filter((i) => i.id !== id));
   };
 
   const updateQuantity = (id: string, delta: number) => {
-    setItems((prev) =>
-      prev
-        .map((item) => {
-          if (item.id === id) {
-            const nextQty = item.quantity + delta;
-            return nextQty > 0 ? { ...item, quantity: nextQty } : null;
-          }
-          return item;
-        })
-        .filter(Boolean) as CartItem[],
-    );
+    const nextItems = items
+      .map((item) => {
+        if (item.id === id) {
+          const nextQty = item.quantity + delta;
+          return nextQty > 0 ? { ...item, quantity: nextQty } : null;
+        }
+        return item;
+      })
+      .filter(Boolean) as CartItem[];
+    saveItems(nextItems);
   };
 
   const clearCart = () => {
-    setItems([]);
+    saveItems([]);
   };
 
   const totalCount = items.reduce((sum, item) => sum + item.quantity, 0);

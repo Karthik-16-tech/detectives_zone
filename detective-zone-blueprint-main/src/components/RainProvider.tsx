@@ -49,7 +49,7 @@ export function RainCanvas({ enabled }: { enabled: boolean }) {
     resize();
     window.addEventListener("resize", resize);
 
-    const count = Math.round(Math.min(520, (w * h) / 3400));
+    const count = Math.round(Math.min(380, (w * h) / 4800));
     const drops: Drop[] = Array.from({ length: count }, () => spawn(w, h, true));
     const splashes: Splash[] = [];
 
@@ -57,12 +57,12 @@ export function RainCanvas({ enabled }: { enabled: boolean }) {
       // depth 0 = far (thin, slow, faint), 1 = near
       const depth = Math.random();
       return {
-        x: Math.random() * (width + 260) - 130,
-        y: initial ? Math.random() * height : -Math.random() * 220 - 20,
-        len: 8 + depth * 26,
-        speed: 5.5 + depth * 13,
-        thickness: 0.45 + depth * 1.1,
-        alpha: 0.06 + depth * 0.22,
+        x: Math.random() * (width + 200) - 100,
+        y: initial ? Math.random() * height : -Math.random() * 180 - 10,
+        len: 8 + depth * 22,
+        speed: 4 + depth * 10,
+        thickness: 0.4 + depth * 0.9,
+        alpha: 0.10 + depth * 0.28,
       };
     }
 
@@ -209,7 +209,7 @@ export function RainCanvas({ enabled }: { enabled: boolean }) {
 
   return (
     <div className="pointer-events-none absolute inset-0 z-40">
-      <canvas ref={canvasRef} className="h-full w-full opacity-70" />
+      <canvas ref={canvasRef} className="h-full w-full opacity-80" />
       <div
         ref={flashRef}
         className="absolute inset-0 transition-opacity duration-150"

@@ -92,43 +92,56 @@ export function CaseKitsEvidence() {
 export function CaseKitCards({
   kits,
   images = [],
+  signatures = [],
   onAdd,
 }: {
   kits: KitEvidenceItem[];
   images?: string[];
+  signatures?: any[];
   onAdd?: (kit: KitEvidenceItem) => void;
 }) {
   if (kits.length === 0) return null;
   const kit = kits[0];
 
-  const members: HoverMemberItem[] =
-    images.length > 0
-      ? images.map((image, i) => {
-          const file =
-            image
-              .split("/")
-              .pop()
-              ?.replace(/\.[^.]+$/, "") ?? `evidence-${i + 1}`;
-          const labels: Record<string, string> = {
-            audio: "Exclusive Audio Evidence",
-            camera: "Crime Scene Photographs",
-            files: "Authentic Case Files",
-            mobile: "Mobile Device Evidence",
-            puzzle: "Hidden Clues & Puzzles",
-            time: "Time Stamped Evidence",
-          };
-          const label = labels[file] ?? file;
-          return {
-            name: label,
-            subtitle: `Case 001 Kit Contains`,
-            image,
-          };
-        })
-      : kit.cases.map((c, i) => ({
-          name: c.title,
-          subtitle: `${c.number} · ${c.difficulty}`,
-          image: images[i] ?? kit.image,
-        }));
+  const labelsMap: Record<string, string> = {
+    audio: "Exclusive Audio Wiretap",
+    camera: "Crime Scene Photographs",
+    files: "Authentic Incident Dossiers",
+    mobile: "Encrypted Mobile Device",
+    puzzle: "Cipher Puzzle Disc",
+    time: "Stopped Pocket Watch",
+    image: "Master Evidence Case Box",
+  };
+
+  let members: HoverMemberItem[] = [];
+
+  if (signatures && signatures.length > 0) {
+    members = signatures.map((sig, i) => ({
+      name: sig.label,
+      subtitle: sig.authenticity_note || `Case 001 Item #${i + 1}`,
+      image: sig.image_url || images[i % images.length] || kit.image,
+    }));
+  } else if (images.length > 0) {
+    members = images.map((image, i) => {
+      const file =
+        image
+          .split("/")
+          .pop()
+          ?.replace(/\.[^.]+$/, "") ?? `evidence-${i + 1}`;
+      const label = labelsMap[file] || `Evidence Artifact 0${i + 1}`;
+      return {
+        name: label,
+        subtitle: `Featured Case Item #${i + 1}`,
+        image,
+      };
+    });
+  } else {
+    members = kit.cases.map((c, i) => ({
+      name: c.title,
+      subtitle: `${c.number} · ${c.difficulty}`,
+      image: images[i] ?? kit.image,
+    }));
+  }
 
   return (
     <section className="relative">

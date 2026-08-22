@@ -20,7 +20,60 @@ const MODULES = [
   { n: 8, icon: Notebook, title: "Detective Notes", desc: "Your notes and deductions", pct: 20 },
 ];
 
-export function InvestigationModules() {
+const ICON_MAP: Record<string, any> = {
+  PersonStanding,
+  FileText,
+  MessagesSquare,
+  Monitor,
+  Folder,
+  Camera,
+  Share2,
+  Notebook,
+};
+
+const DEFAULT_ICONS = [
+  PersonStanding,
+  FileText,
+  MessagesSquare,
+  Monitor,
+  Folder,
+  Camera,
+  Share2,
+  Notebook,
+];
+
+interface ModuleItem {
+  n?: number;
+  icon?: any;
+  title: string;
+  desc: string;
+  pct?: number;
+}
+
+interface InvestigationModulesProps {
+  modules?: ModuleItem[];
+}
+
+export function InvestigationModules({ modules }: InvestigationModulesProps) {
+  const displayModules = modules && modules.length > 0
+    ? modules.map((m, idx) => {
+        let IconComp = DEFAULT_ICONS[idx % DEFAULT_ICONS.length];
+        if (m.icon && typeof m.icon === "string" && ICON_MAP[m.icon]) {
+          IconComp = ICON_MAP[m.icon];
+        } else if (m.icon && typeof m.icon !== "string") {
+          IconComp = m.icon;
+        }
+
+        return {
+          n: m.n || idx + 1,
+          icon: IconComp,
+          title: m.title,
+          desc: m.desc,
+          pct: m.pct !== undefined ? m.pct : (MODULES[idx]?.pct || 50),
+        };
+      })
+    : MODULES;
+
   return (
     <section className="panel grain p-4 sm:p-8">
       <div className="grid grid-cols-[minmax(0,1fr)_auto] items-end gap-4">
@@ -35,11 +88,11 @@ export function InvestigationModules() {
             Explore all sections and uncover the truth.
           </p>
         </div>
-        <span className="label-xs shrink-0 text-muted-foreground">8 Modules</span>
+        <span className="label-xs shrink-0 text-muted-foreground">{displayModules.length} Modules</span>
       </div>
 
       <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {MODULES.map((m) => (
+        {displayModules.map((m) => (
           <button
             key={m.n}
             className="group relative overflow-hidden rounded-2xl border border-hairline bg-surface-2/50 p-5 text-left transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/40 hover:bg-surface-2 hover:shadow-[var(--glow-red)]"

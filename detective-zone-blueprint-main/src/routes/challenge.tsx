@@ -8,18 +8,20 @@ import {
   Eye,
   ChevronDown,
   Zap,
+  Maximize2,
+  X,
+  ZoomIn,
+  ZoomOut,
+  RotateCcw,
+  Clock,
 } from "lucide-react";
 import { useEffect, useRef, useState, useMemo, useCallback } from "react";
-import evidenceRoom from "@/assets/evidence-room.jpg";
+import { S3_MEDIA } from "@/lib/media";
+const evidenceRoom = S3_MEDIA.evidenceRoom;
 import { SpotlightReveal } from "@/components/SpotlightReveal";
 
-import { redirect } from "@tanstack/react-router";
-
 export const Route = createFileRoute("/challenge")({
-  beforeLoad: () => {
-    throw redirect({ to: "/", hash: "challenge" });
-  },
-  component: () => null,
+  component: Challenge,
 });
 
 /* ─── DATA ──────────────────────────────────────────────────────────────── */
@@ -27,27 +29,67 @@ export const Route = createFileRoute("/challenge")({
 const mysteries = [
   {
     id: 1,
-    label: "Mystery 01",
-    q: "Which object is hidden inside the detective's coat?",
-    hint: "It keeps time it no longer owns. Stopped at 11:47 PM.",
-    answers: ["watch", "pocket watch", "pocketwatch"],
-    clue: "Personal item — concealed",
+    label: "Mystery 01 — Room Key Code",
+    q: "What room number is engraved on the brass hotel key resting beside the evidence dossier?",
+    hint: "Look closely at the brass key tag on the desk next to the open police dossier. Format: 104",
+    answers: [
+      "104",
+      "room 104",
+      "room104",
+      "#104",
+      "104.",
+      "one hundred four",
+      "one zero four",
+    ],
+    clue: "Room identifier — Stamped on brass hotel tag",
   },
   {
     id: 2,
-    label: "Mystery 02",
-    q: "What number is engraved on the hotel room key?",
-    hint: "One floor above the lobby. Look carefully at the evidence.",
-    answers: ["104", "room 104"],
-    clue: "Room identifier — brass tag",
+    label: "Mystery 02 — Audio Evidence Device",
+    q: "What audio recording device is connected to the telephone on the detective's desk?",
+    hint: "The analog cassette machine sitting near the lamp that recorded the final voicemail. (e.g. Tape Recorder / Cassette Player)",
+    answers: [
+      "tape recorder",
+      "cassette recorder",
+      "recorder",
+      "audio recorder",
+      "cassette player",
+      "voice recorder",
+      "cassette",
+      "tape",
+      "voicemail recorder",
+      "cassette tape recorder",
+    ],
+    clue: "Analog equipment — Capturing the last incoming transmission",
   },
   {
     id: 3,
-    label: "Mystery 03",
-    q: "Which side contains the missing photograph?",
-    hint: "The hand that writes points there. Left or right.",
-    answers: ["left", "left side"],
-    clue: "Location — relative to the notebook",
+    label: "Mystery 03 — Temporal Connection",
+    q: "What exact time appears repeatedly in the scene and connects the notebook, wall note, clock, and sticky note?",
+    hint: "Inspect the clock hands, the timestamp on the open notebook, the wall note, and the sticky note by the desk lamp. Format: 09:17",
+    answers: [
+      "09:17",
+      "9:17",
+      "09:17 am",
+      "09:17 pm",
+      "9:17 am",
+      "9:17 pm",
+      "09:17am",
+      "09:17pm",
+      "9:17am",
+      "9:17pm",
+      "09.17",
+      "9.17",
+      "09:17⏱️",
+      "09:17 ⏱️",
+      "9:17 ⏱️",
+      "9:17⏱️",
+      "0917",
+      "917",
+      "nine seventeen",
+      "9 seventeen",
+    ],
+    clue: "Recurring timestamp — Clock, notebook, wall note, and sticky note",
   },
 ];
 
@@ -368,9 +410,21 @@ function Challenge() {
   const [values, setValues] = useState<Record<number, string>>({});
   const [solved, setSolved] = useState<Record<number, boolean>>({});
   const [successBurst, setSuccessBurst] = useState(false);
+  const [imageModalOpen, setImageModalOpen] = useState(false);
+  const [zoomLevel, setZoomLevel] = useState(1);
 
   const solvedCount = useMemo(() => Object.values(solved).filter(Boolean).length, [solved]);
   const unlocked = solvedCount === mysteries.length;
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setImageModalOpen(false);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   const check = useCallback(
     (id: number, val: string) => {
@@ -651,6 +705,40 @@ function Challenge() {
               <Search style={{ width: 9, height: 9 }} />
               Move light to reveal clues
             </div>
+
+            {/* Inspect Scene Fullscreen Dialog Button */}
+            <button
+              type="button"
+              onClick={() => {
+                setZoomLevel(1);
+                setImageModalOpen(true);
+              }}
+              className="cursor-pointer transition-all duration-300 hover:scale-105"
+              style={{
+                position: "absolute",
+                top: 16,
+                right: 16,
+                zIndex: 40,
+                display: "flex",
+                alignItems: "center",
+                gap: 7,
+                fontFamily: "IBM Plex Mono, monospace",
+                fontSize: 9.5,
+                fontWeight: 600,
+                letterSpacing: "0.18em",
+                color: "#FF4A50",
+                textTransform: "uppercase",
+                background: "rgba(0,0,0,0.85)",
+                backdropFilter: "blur(10px)",
+                border: "1px solid rgba(200,29,36,0.6)",
+                boxShadow: "0 0 16px rgba(200,29,36,0.3)",
+                borderRadius: 6,
+                padding: "6px 12px",
+              }}
+            >
+              <Maximize2 style={{ width: 12, height: 12 }} />
+              Inspect Scene
+            </button>
           </SpotlightReveal>
 
           {/* ── RIGHT: Classified briefing panel ── */}
@@ -1172,6 +1260,101 @@ function Challenge() {
             animation: "dz-stamp-drop 0.8s ease forwards",
           }}
         />
+      )}
+
+      {/* ════════════════════════════════════════════════════
+          CRIME SCENE EVIDENCE DIALOG MODAL / LIGHTBOX
+      ════════════════════════════════════════════════════ */}
+      {imageModalOpen && (
+        <div
+          className="fixed inset-0 z-[250] flex items-center justify-center p-4 sm:p-6"
+          style={{ background: "rgba(0,0,0,0.92)", backdropFilter: "blur(14px)" }}
+          onClick={() => setImageModalOpen(false)}
+        >
+          <div
+            className="relative w-full max-w-[1280px] max-h-[95vh] flex flex-col rounded-2xl overflow-hidden border border-[#C81D24]/40 shadow-[0_0_50px_rgba(200,29,36,0.25)] bg-[#0A0A0A]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-white/10 bg-black/80">
+              <div className="flex items-center gap-3">
+                <span className="inline-block w-2.5 h-2.5 rounded-full bg-[#C81D24] animate-pulse" />
+                <div>
+                  <h3 className="font-display text-[20px] text-white tracking-widest uppercase" style={{ fontFamily: "Bebas Neue, sans-serif" }}>
+                    Crime Scene Evidence // Room 104
+                  </h3>
+                  <p className="font-mono text-[10px] text-[#888] tracking-widest uppercase">
+                    Inspect Clock, Notebook, Wall Notes & Sticky Notes · Clue Marker: 09:17 ⏱️
+                  </p>
+                </div>
+              </div>
+
+              {/* Controls & Close */}
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-1 bg-white/5 border border-white/10 rounded-lg p-1">
+                  <button
+                    onClick={() => setZoomLevel((z) => Math.min(z + 0.25, 2.5))}
+                    title="Zoom In"
+                    className="p-1.5 hover:bg-white/10 rounded text-white/70 hover:text-white transition-colors cursor-pointer"
+                  >
+                    <ZoomIn className="w-4 h-4" />
+                  </button>
+                  <span className="font-mono text-[10px] px-2 text-white/60">
+                    {Math.round(zoomLevel * 100)}%
+                  </span>
+                  <button
+                    onClick={() => setZoomLevel((z) => Math.max(z - 0.25, 0.75))}
+                    title="Zoom Out"
+                    className="p-1.5 hover:bg-white/10 rounded text-white/70 hover:text-white transition-colors cursor-pointer"
+                  >
+                    <ZoomOut className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => setZoomLevel(1)}
+                    title="Reset Zoom"
+                    className="p-1.5 hover:bg-white/10 rounded text-white/70 hover:text-white transition-colors cursor-pointer"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+
+                <button
+                  onClick={() => setImageModalOpen(false)}
+                  className="flex h-9 w-9 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-white/70 hover:text-white hover:bg-red-950/60 hover:border-red-500/50 transition-all cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Image Area */}
+            <div className="relative flex-1 overflow-auto flex items-center justify-center p-4 sm:p-8 bg-black/95 max-h-[78vh]">
+              <div
+                style={{
+                  transform: `scale(${zoomLevel})`,
+                  transformOrigin: "center center",
+                  transition: "transform 0.2s ease-out",
+                }}
+                className="max-w-full"
+              >
+                <img
+                  src={evidenceRoom}
+                  alt="High Resolution Crime Scene Room 104"
+                  className="max-w-full max-h-[70vh] object-contain rounded-lg shadow-2xl border border-white/10"
+                />
+              </div>
+            </div>
+
+            {/* Modal Footer Banner */}
+            <div className="flex flex-wrap items-center justify-between px-6 py-3 border-t border-white/10 bg-black/80 font-mono text-[10px] text-[#A0A0A0]">
+              <div className="flex items-center gap-2">
+                <Clock className="w-3.5 h-3.5 text-[#C81D24]" />
+                <span>Forensic Temporal Marker: Look for repeating time <strong>09:17</strong> across notes and clock</span>
+              </div>
+              <span className="text-[#666]">Press ESC or click outside to exit</span>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState, useEffect, useRef } from "react";
 import { useCart } from "@/context/CartContext";
+import { api } from "@/lib/api";
 import {
   Search,
   ShoppingCart,
@@ -33,20 +34,22 @@ import {
   CaseKitCards,
   type KitEvidenceItem,
 } from "@/components/templates/CaseKitsEvidence";
-import caseVoicemail from "@/assets/case-voicemail.png";
-import caseWitness from "@/assets/case-witness.png";
-import caseLetter from "@/assets/case-letter.png";
-import caseBetrayal from "@/assets/case-betrayal.png";
-import caseHeir from "@/assets/case-heir.png";
-import caseExperiment from "@/assets/case-experiment.png";
-import evidenceRoom from "@/assets/evidence-room.jpg";
-import dz001Kit from "@/assets/case kits/image.png";
-import sigAudio from "@/assets/signature/audio.png";
-import sigCamera from "@/assets/signature/camera.png";
-import sigFiles from "@/assets/signature/files.png";
-import sigMobile from "@/assets/signature/mobile.png";
-import sigPuzzle from "@/assets/signature/puzzle.png";
-import sigTime from "@/assets/signature/time.png";
+import { S3_MEDIA } from "@/lib/media";
+
+const caseVoicemail = S3_MEDIA.cases.caseVoicemail;
+const caseWitness = S3_MEDIA.cases.caseWitness;
+const caseLetter = S3_MEDIA.cases.caseLetter;
+const caseBetrayal = S3_MEDIA.cases.caseBetrayal;
+const caseHeir = S3_MEDIA.cases.caseHeir;
+const caseExperiment = S3_MEDIA.cases.caseExperiment;
+const evidenceRoom = S3_MEDIA.evidenceRoom;
+const dz001Kit = S3_MEDIA.caseKits.dz001Kit;
+const sigAudio = S3_MEDIA.signature.audio;
+const sigCamera = S3_MEDIA.signature.camera;
+const sigFiles = S3_MEDIA.signature.files;
+const sigMobile = S3_MEDIA.signature.mobile;
+const sigPuzzle = S3_MEDIA.signature.puzzle;
+const sigTime = S3_MEDIA.signature.time;
 
 export const Route = createFileRoute("/store")({
   component: StorePage,
@@ -78,13 +81,13 @@ const products: Product[] = [
       "A successful businessman found dead in his study. No forced entry. Just a voicemail… and a lot of questions. Every clue leads deeper into a web of secrets no one was meant to uncover.",
     price: 999,
     image: caseVoicemail,
-    badge: "BESTSELLER",
+    badge: "IN STOCK · 10 UNITS",
     stars: 5,
     reviews: 124,
     difficulty: "Hard",
     duration: "3–5 hrs",
     type: "hybrid",
-    stock: 12,
+    stock: 10,
   },
   {
     id: "p2",
@@ -94,13 +97,13 @@ const products: Product[] = [
       "A reclusive writer found dead in a locked room. A witness that never spoke… but saw everything. The pages of the final manuscript hold the key to a truth buried in silence.",
     price: 999,
     image: caseWitness,
-    badge: "BESTSELLER",
+    badge: "OUT OF STOCK",
     stars: 5,
     reviews: 98,
     difficulty: "Hard",
     duration: "3–6 hrs",
     type: "hybrid",
-    stock: 8,
+    stock: 0,
   },
   {
     id: "p3",
@@ -110,13 +113,13 @@ const products: Product[] = [
       "A threatening letter. A missing girl. A trail of blood. The shadows are speaking. Follow the crimson ink before the next message arrives — and the clock runs out.",
     price: 999,
     image: caseLetter,
-    badge: "NEW",
+    badge: "OUT OF STOCK",
     stars: 4,
     reviews: 76,
     difficulty: "Medium",
     duration: "2–4 hrs",
     type: "physical",
-    stock: 24,
+    stock: 0,
   },
   {
     id: "p4",
@@ -126,13 +129,13 @@ const products: Product[] = [
       "A man caught between loyalty and truth. One choice changed everything. Trust no one. Deception runs deep, and the betrayer may be closer than you think.",
     price: 999,
     image: caseBetrayal,
-    badge: "COLLECTOR",
+    badge: "OUT OF STOCK",
     stars: 5,
     reviews: 64,
     difficulty: "Expert",
     duration: "4–7 hrs",
     type: "hybrid",
-    stock: 5,
+    stock: 0,
   },
   {
     id: "p5",
@@ -142,13 +145,13 @@ const products: Product[] = [
       "They were here one day, gone the next. A disappearance that made no noise at all. No goodbye, no trace — just an empty room and a question that haunts everyone.",
     price: 999,
     image: caseHeir,
-    badge: "CLASSIFIED",
+    badge: "OUT OF STOCK",
     stars: 4,
     reviews: 42,
     difficulty: "Medium",
     duration: "3–5 hrs",
     type: "physical",
-    stock: 15,
+    stock: 0,
   },
   {
     id: "p6",
@@ -158,13 +161,13 @@ const products: Product[] = [
       "A scientist's last experiment was never meant to be found. Now the cure is the disease. The lab notes tell a story of obsession, and the final formula changes everything.",
     price: 999,
     image: caseExperiment,
-    badge: "TOP SECRET",
+    badge: "OUT OF STOCK",
     stars: 5,
     reviews: 83,
     difficulty: "Hard",
     duration: "4–6 hrs",
     type: "hybrid",
-    stock: 9,
+    stock: 0,
   },
 ];
 
@@ -264,17 +267,78 @@ function ScrollReveal({ children, delay = 0 }: { children: React.ReactNode; dela
 
 /* ─── component ─── */
 function StorePage() {
-  const [cart, setCart] = useState<CartItem[]>(() => [
-    { product: products[0], qty: 1 },
-    { product: products[1], qty: 1 },
-  ]);
+  const [liveProducts, setLiveProducts] = useState<Product[]>(products);
+  const [featuredSettings, setFeaturedSettings] = useState({
+    code: "DZ-001",
+    title: "The Last Voicemail",
+    hover_title: "The Case Is Open.",
+    quote: '"A sealed case. A missing voice. Thirty pieces of evidence standing between you and the truth."',
+    price: 999,
+    duration: "3–4",
+    level: "Expert",
+    image: dz001Kit,
+  });
+
   const [quickView, setQuickView] = useState<Product | null>(null);
   const [addedIds, setAddedIds] = useState<Set<string>>(new Set());
   const [cartOpen, setCartOpen] = useState(false);
   const [storeTab, setStoreTab] = useState<"CASES" | "KITS">("CASES");
+  const [liveSignatures, setLiveSignatures] = useState<any[]>([]);
   const featuredRef = useRef<HTMLDivElement>(null);
   const [featuredParallax, setFeaturedParallax] = useState(0);
   const [dz001Hovered, setDz001Hovered] = useState(false);
+
+  useEffect(() => {
+    Promise.all([
+      api.getProducts().catch(() => []),
+      api.getSettings().catch(() => ({})),
+      api.getSignatures().catch(() => []),
+    ]).then(([prods, sets, sigs]: [any[], any, any[]]) => {
+      if (sigs && Array.isArray(sigs) && sigs.length > 0) {
+        setLiveSignatures(sigs);
+      }
+
+      if (prods && Array.isArray(prods) && prods.length > 0) {
+        const imageMap: Record<string, string> = {
+          p1: caseVoicemail,
+          p2: caseWitness,
+          p3: caseLetter,
+          p4: caseBetrayal,
+          p5: caseHeir,
+          p6: caseExperiment,
+        };
+        const mapped = prods.map((p: any, idx: number) => ({
+          id: p.slug || `p${idx + 1}`,
+          caseNumber: p.sku ? p.sku.replace("DZ-KIT-", "CASE ") : `CASE 00${idx + 1}`,
+          title: p.name ? p.name.split(" — ")[0] : p.name,
+          description: p.short_description || "",
+          price: p.price || 999,
+          image: (p.cover_image && !p.cover_image.startsWith("/src")) ? p.cover_image : (imageMap[p.slug] || imageMap[`p${idx + 1}`] || caseVoicemail),
+          badge: idx === 0 ? "BESTSELLER" : idx === 1 ? "BESTSELLER" : idx === 2 ? "NEW" : idx === 3 ? "COLLECTOR" : idx === 4 ? "CLASSIFIED" : "TOP SECRET",
+          stars: 5,
+          reviews: 80 + idx * 10,
+          difficulty: "Hard",
+          duration: "3–5 hrs",
+          type: "hybrid" as const,
+          stock: p.stock_quantity ?? 10,
+        }));
+        setLiveProducts(mapped);
+      }
+
+      if (sets && Object.keys(sets).length > 0) {
+        setFeaturedSettings({
+          code: sets.featured_kit_code || "DZ-001",
+          title: sets.featured_kit_title || "The Last Voicemail",
+          hover_title: sets.featured_kit_hover_title || "The Case Is Open.",
+          quote: sets.featured_kit_quote || '"A sealed case. A missing voice. Thirty pieces of evidence standing between you and the truth."',
+          price: parseFloat(sets.featured_kit_price) || 999,
+          duration: sets.featured_kit_duration || "3–4",
+          level: sets.featured_kit_level || "Expert",
+          image: sets.featured_kit_image && !sets.featured_kit_image.startsWith("/src") ? sets.featured_kit_image : dz001Kit,
+        });
+      }
+    });
+  }, []);
 
   useEffect(() => {
     let raf = 0;
@@ -296,7 +360,14 @@ function StorePage() {
     };
   }, [storeTab]);
 
-  const { addToCart: addGlobalCart } = useCart();
+  const {
+    items,
+    addToCart: addGlobalCart,
+    removeFromCart,
+    updateQuantity,
+    totalCount,
+    subtotal,
+  } = useCart();
 
   const addToCart = (p: Product) => {
     addGlobalCart({
@@ -306,11 +377,6 @@ function StorePage() {
       price: p.price,
       image: p.image,
       type: p.type === "physical" ? "Physical Case Box" : "Hybrid Evidence Package",
-    });
-    setCart((prev) => {
-      const existing = prev.find((c) => c.product.id === p.id);
-      if (existing) return prev.map((c) => (c.product.id === p.id ? { ...c, qty: c.qty + 1 } : c));
-      return [...prev, { product: p, qty: 1 }];
     });
     setAddedIds((s) => {
       const n = new Set(s);
@@ -345,20 +411,6 @@ function StorePage() {
       stock: 20,
     });
   };
-
-  const removeFromCart = (id: string) => setCart((prev) => prev.filter((c) => c.product.id !== id));
-
-  const updateQty = (id: string, delta: number) =>
-    setCart((prev) =>
-      prev
-        .map((c) => (c.product.id === id ? { ...c, qty: Math.max(0, c.qty + delta) } : c))
-        .filter((c) => c.qty > 0),
-    );
-
-  const subtotal = cart.reduce((sum, c) => sum + c.product.price * c.qty, 0);
-  const shipping = 0;
-  const taxes = Math.round(subtotal * 0.18);
-  const total = subtotal + shipping + taxes;
 
   const kitsEvidence: KitEvidenceItem[] = caseKits.map((k) => ({
     id: k.id,
@@ -499,17 +551,6 @@ function StorePage() {
                   YOUR INVESTIGATION.
                 </span>
               </h1>
-              <p
-                className="mt-5 max-w-[440px] text-[13px] leading-relaxed"
-                style={{
-                  color: "#999",
-                  fontFamily: "Inter, sans-serif",
-                }}
-              >
-                Every case comes with real-world clues.
-                <br />
-                Every solution brings you closer to the truth.
-              </p>
               <div className="mt-7 flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:gap-4">
                 <button
                   className="group relative flex items-center justify-center gap-2 rounded-lg border px-7 py-3.5 font-display text-[12px] tracking-[0.2em] uppercase transition-all duration-500"
@@ -675,8 +716,8 @@ function StorePage() {
                         />
 
                         <img
-                          src={dz001Kit}
-                          alt="DZ-001 The Last Voicemail - Detective's Zone Case Kit"
+                          src={featuredSettings.image}
+                          alt={`${featuredSettings.code} ${featuredSettings.title}`}
                           className="w-full h-auto object-contain transition-all duration-[600ms] ease-out"
                           style={{
                             transform: dz001Hovered
@@ -707,7 +748,7 @@ function StorePage() {
                         {/* Case code */}
                         <div className="flex items-center gap-3 mb-4">
                           <span className="font-mono text-[13px] tracking-[0.3em] text-[#C81D24] font-bold">
-                            DZ-001
+                            {featuredSettings.code}
                           </span>
                           <div className="h-px w-8 bg-[#C81D24]/40" />
                           <span className="font-mono text-[9px] tracking-[0.2em] text-[#555] uppercase">
@@ -718,11 +759,9 @@ function StorePage() {
                         {/* Title with hover state */}
                         <h3 className="font-display text-[32px] lg:text-[40px] xl:text-[46px] tracking-[0.04em] uppercase text-white leading-[0.95] transition-all duration-500">
                           {dz001Hovered ? (
-                            <span className="text-[#C81D24]">The Case Is Open.</span>
+                            <span className="text-[#C81D24]">{featuredSettings.hover_title}</span>
                           ) : (
-                            <>
-                              The Last <span className="text-[#C81D24]">Voicemail</span>
-                            </>
+                            <span className="text-white">{featuredSettings.title}</span>
                           )}
                         </h3>
 
@@ -731,8 +770,7 @@ function StorePage() {
                           className="mt-5 text-[15px] leading-[1.7] text-[#888] font-sans max-w-md"
                           style={{ fontStyle: "italic" }}
                         >
-                          "A sealed case. A missing voice. Thirty pieces of evidence standing
-                          between you and the truth."
+                          {featuredSettings.quote}
                         </p>
 
                         {/* Metadata chips */}
@@ -745,13 +783,13 @@ function StorePage() {
                           </div>
                           <div className="flex flex-col gap-0.5">
                             <span className="text-[#C81D24] text-[18px] font-bold tracking-normal">
-                              3–4
+                              {featuredSettings.duration}
                             </span>
                             <span className="text-[10px] text-[#555]">Hours</span>
                           </div>
                           <div className="flex flex-col gap-0.5">
                             <span className="text-[#C81D24] text-[18px] font-bold tracking-normal">
-                              Expert
+                              {featuredSettings.level}
                             </span>
                             <span className="text-[10px] text-[#555]">Level</span>
                           </div>
@@ -760,7 +798,7 @@ function StorePage() {
                         {/* Price */}
                         <div className="mt-8 flex items-baseline gap-3">
                           <span className="font-display text-[36px] font-bold text-white">
-                            ₹999<span className="text-[20px] text-[#666]">/-</span>
+                            ₹{featuredSettings.price}<span className="text-[20px] text-[#666]">/-</span>
                           </span>
                         </div>
                         <p className="mt-1 font-mono text-[10px] tracking-[0.2em] text-[#555] uppercase">
@@ -769,7 +807,7 @@ function StorePage() {
 
                         {/* CTA */}
                         <button
-                          onClick={() => addToCart(products[0])}
+                          onClick={() => addToCart(liveProducts[0] || products[0])}
                           className="group/cta mt-8 flex items-center gap-3 rounded-[3px] py-3.5 px-7 font-mono text-[12px] font-bold tracking-[0.2em] uppercase transition-all duration-500 cursor-pointer w-fit"
                           style={{
                             background: "linear-gradient(135deg, #7A0F13 0%, #A11418 100%)",
@@ -811,7 +849,8 @@ function StorePage() {
                 <div className="mt-16">
                   <CaseKitCards
                     kits={kitsEvidence}
-                    images={[sigAudio, sigCamera, sigFiles, sigMobile, sigPuzzle, sigTime]}
+                    signatures={liveSignatures}
+                    images={[sigAudio, sigCamera, sigFiles, sigMobile, sigPuzzle, sigTime, dz001Kit]}
                     onAdd={(kit) => {
                       const orig = caseKits.find((c) => c.id === kit.id);
                       if (orig) addKitToCart(orig);
@@ -866,22 +905,17 @@ function StorePage() {
                     <div className="relative z-10 flex flex-col h-full justify-between pointer-events-none">
                       {/* Top Row: Case badge & number */}
                       <div className="flex items-center justify-between w-full">
-                        <span
-                          className="rounded-[2px] px-2 py-0.5 font-mono text-[9px] font-bold tracking-[0.2em] uppercase border"
-                          style={{
-                            background:
-                              products[0].badge === "BESTSELLER"
-                                ? "rgba(122,15,19,0.9)"
-                                : products[0].badge === "NEW"
-                                  ? "rgba(20,120,20,0.85)"
-                                  : "rgba(180,140,40,0.85)",
-                            borderColor: "rgba(255,255,255,0.1)",
-                            color: "#fff",
-                            backdropFilter: "blur(8px)",
-                          }}
-                        >
-                          {products[0].badge}
-                        </span>
+                        {products[0].stock > 0 ? (
+                          <span className="inline-flex items-center gap-1.5 rounded-[3px] px-2.5 py-1 font-mono text-[9px] font-bold tracking-[0.2em] uppercase border border-[#C81D24]/60 bg-black/90 text-[#FF4A50] shadow-[0_0_12px_rgba(200,29,36,0.35)] backdrop-blur-md">
+                            <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#C81D24] animate-pulse" />
+                            IN STOCK · {products[0].stock} UNITS
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1.5 rounded-[3px] px-2.5 py-1 font-mono text-[9px] font-bold tracking-[0.2em] uppercase border border-red-950/60 bg-black/85 text-[#777] shadow-[0_0_8px_rgba(0,0,0,0.6)] backdrop-blur-md">
+                            <span className="inline-block w-1.5 h-1.5 rounded-full bg-red-900/60" />
+                            OUT OF STOCK
+                          </span>
+                        )}
                         <div className="flex items-center gap-3">
                           <button
                             onClick={() => setQuickView(products[0])}
@@ -1022,22 +1056,17 @@ function StorePage() {
                             />
 
                             {/* Badge stamp */}
-                            <span
-                              className="absolute left-3 top-3 rounded-[2px] px-2 py-0.5 font-mono text-[8px] font-bold tracking-[0.15em] uppercase border"
-                              style={{
-                                background:
-                                  p.badge === "BESTSELLER"
-                                    ? "rgba(122,15,19,0.9)"
-                                    : p.badge === "NEW"
-                                      ? "rgba(20,120,20,0.85)"
-                                      : "rgba(180,140,40,0.85)",
-                                borderColor: "rgba(255,255,255,0.1)",
-                                color: "#fff",
-                                backdropFilter: "blur(8px)",
-                              }}
-                            >
-                              {p.badge}
-                            </span>
+                            {p.stock > 0 ? (
+                              <span className="absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-[3px] px-2 py-0.5 font-mono text-[8px] font-bold tracking-[0.18em] uppercase border border-[#C81D24]/60 bg-black/90 text-[#FF4A50] shadow-[0_0_12px_rgba(200,29,36,0.35)] backdrop-blur-md z-10">
+                                <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#C81D24] animate-pulse" />
+                                IN STOCK · {p.stock} UNITS
+                              </span>
+                            ) : (
+                              <span className="absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-[3px] px-2 py-0.5 font-mono text-[8px] font-bold tracking-[0.18em] uppercase border border-red-950/50 bg-black/85 text-[#777] shadow-[0_0_8px_rgba(0,0,0,0.6)] backdrop-blur-md z-10">
+                                <span className="inline-block w-1.5 h-1.5 rounded-full bg-red-900/60" />
+                                OUT OF STOCK
+                              </span>
+                            )}
 
                             {/* quick view button */}
                             <button
@@ -1115,29 +1144,39 @@ function StorePage() {
 
                               {/* Buttons */}
                               <div className="mt-3 flex gap-2">
-                                <button
-                                  onClick={() => addToCart(p)}
-                                  className="flex-1 flex items-center justify-center gap-1.5 rounded-[3px] py-2 font-mono text-[9px] font-semibold tracking-[0.15em] uppercase transition-all duration-300 cursor-pointer"
-                                  style={{
-                                    background: addedIds.has(p.id)
-                                      ? "rgba(20,120,20,0.8)"
-                                      : "rgba(255,255,255,0.02)",
-                                    border: addedIds.has(p.id)
-                                      ? "1px solid rgba(20,120,20,0.4)"
-                                      : "1px solid rgba(255,255,255,0.08)",
-                                    color: addedIds.has(p.id) ? "#fff" : "#bbb",
-                                  }}
-                                >
-                                  {addedIds.has(p.id) ? (
-                                    <>
-                                      <ShoppingCart className="h-3 w-3" /> Added!
-                                    </>
-                                  ) : (
-                                    <>
-                                      <ShoppingCart className="h-3 w-3" /> Add to Cart
-                                    </>
-                                  )}
-                                </button>
+                                {p.stock > 0 ? (
+                                  <button
+                                    onClick={() => addToCart(p)}
+                                    className="flex-1 flex items-center justify-center gap-1.5 rounded-[3px] py-2 font-mono text-[9px] font-semibold tracking-[0.15em] uppercase transition-all duration-300 cursor-pointer"
+                                    style={{
+                                      background: addedIds.has(p.id)
+                                        ? "rgba(20,120,20,0.8)"
+                                        : "rgba(255,255,255,0.02)",
+                                      border: addedIds.has(p.id)
+                                        ? "1px solid rgba(20,120,20,0.4)"
+                                        : "1px solid rgba(255,255,255,0.08)",
+                                      color: addedIds.has(p.id) ? "#fff" : "#bbb",
+                                    }}
+                                  >
+                                    {addedIds.has(p.id) ? (
+                                      <>
+                                        <ShoppingCart className="h-3 w-3" /> Added!
+                                      </>
+                                    ) : (
+                                      <>
+                                        <ShoppingCart className="h-3 w-3" /> Add to Cart
+                                      </>
+                                    )}
+                                  </button>
+                                ) : (
+                                  <button
+                                    disabled
+                                    className="flex-1 flex items-center justify-center gap-1.5 rounded-[3px] py-2 font-mono text-[9px] font-semibold tracking-[0.15em] uppercase border border-white/10 bg-white/[0.02] text-white/40 cursor-not-allowed"
+                                  >
+                                    <Lock className="h-3 w-3 text-red-500/70" />
+                                    <span>Out of Stock</span>
+                                  </button>
+                                )}
 
                                 <Link
                                   to="/cases/$caseId"
@@ -1169,32 +1208,34 @@ function StorePage() {
       </div>
 
       {/* ═══════ FLOATING CART BUTTON ═══════ */}
+      {/* ═══════ FLOATING GLOWING CART BUTTON ═══════ */}
       <button
         onClick={() => setCartOpen(true)}
-        className="fixed z-[100] flex items-center justify-center rounded-full transition-all duration-500"
+        aria-label="Open Cart"
+        className="fixed z-[100] flex items-center justify-center rounded-full transition-all duration-500 hover:scale-110 active:scale-95 cursor-pointer"
         style={{
           bottom: 32,
           right: 32,
-          width: 56,
-          height: 56,
-          background: "linear-gradient(135deg, #7A0F13 0%, #A11418 100%)",
-          border: "1px solid rgba(200,29,36,0.4)",
-          boxShadow: "0 0 30px rgba(122,15,19,0.4), 0 8px 24px rgba(0,0,0,0.5)",
+          width: 58,
+          height: 58,
+          background: "linear-gradient(135deg, #8B1116 0%, #C81D24 100%)",
+          border: "1px solid rgba(255,255,255,0.2)",
+          boxShadow: "0 0 35px rgba(200,29,36,0.5), 0 8px 24px rgba(0,0,0,0.6)",
           color: "#fff",
         }}
       >
-        <ShoppingCart className="h-5 w-5" />
-        {cart.length > 0 && (
+        <ShoppingCart className="h-6 w-6" />
+        {totalCount > 0 && (
           <span
-            className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full font-mono text-[9px] font-bold"
+            className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full font-mono text-[10px] font-bold shadow-lg"
             style={{
-              background: "#C81D24",
-              color: "#fff",
-              boxShadow: "0 0 10px rgba(200,29,36,0.6)",
+              background: "#ffffff",
+              color: "#C81D24",
+              boxShadow: "0 0 12px rgba(255,255,255,0.8)",
               animation: "badge-pulse 2s ease-in-out infinite",
             }}
           >
-            {cart.reduce((s, c) => s + c.qty, 0)}
+            {totalCount}
           </span>
         )}
       </button>
@@ -1203,7 +1244,7 @@ function StorePage() {
       {cartOpen && (
         <div
           className="fixed inset-0 z-[150]"
-          style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)" }}
+          style={{ background: "rgba(0,0,0,0.7)", backdropFilter: "blur(6px)" }}
           onClick={() => setCartOpen(false)}
         />
       )}
@@ -1212,38 +1253,35 @@ function StorePage() {
       <div
         className="fixed top-0 right-0 z-[160] flex h-full flex-col transition-transform duration-500 ease-out"
         style={{
-          width: "min(380px, 100vw)",
+          width: "min(400px, 100vw)",
           transform: cartOpen ? "translateX(0)" : "translateX(100%)",
-          background: "rgba(6,6,6,0.97)",
-          borderLeft: "1px solid rgba(255,255,255,0.06)",
+          background: "rgba(8,8,8,0.98)",
+          borderLeft: "1px solid rgba(255,255,255,0.08)",
           backdropFilter: "blur(30px)",
-          boxShadow: cartOpen ? "-20px 0 60px rgba(0,0,0,0.6)" : "none",
+          boxShadow: cartOpen ? "-20px 0 60px rgba(0,0,0,0.8)" : "none",
         }}
       >
         {/* drawer header */}
         <div
           className="flex items-center justify-between border-b px-6 py-5"
-          style={{ borderColor: "rgba(255,255,255,0.06)" }}
+          style={{ borderColor: "rgba(255,255,255,0.08)" }}
         >
           <div className="flex items-center gap-3">
-            <ShoppingCart className="h-4 w-4" style={{ color: "#C81D24" }} />
+            <ShoppingCart className="h-4 w-4 text-blood" />
             <span
-              className="font-display text-[14px] tracking-[0.15em] uppercase"
-              style={{ color: "#fff" }}
+              className="font-display text-[14px] tracking-[0.15em] uppercase font-bold text-white"
             >
               Your Cart
             </span>
             <span
-              className="flex h-5 w-5 items-center justify-center rounded-full font-mono text-[9px]"
-              style={{ background: "rgba(200,29,36,0.2)", color: "#C81D24" }}
+              className="flex h-5 w-5 items-center justify-center rounded-full font-mono text-[9px] font-bold bg-blood/20 text-blood"
             >
-              {cart.length}
+              {totalCount}
             </span>
           </div>
           <button
             onClick={() => setCartOpen(false)}
-            className="flex h-8 w-8 items-center justify-center rounded-full transition-colors duration-300"
-            style={{ background: "rgba(255,255,255,0.05)", color: "#888" }}
+            className="flex h-8 w-8 items-center justify-center rounded-full bg-white/5 text-white/60 hover:text-white transition-colors cursor-pointer"
           >
             <X className="h-4 w-4" />
           </button>
@@ -1254,79 +1292,64 @@ function StorePage() {
           className="flex-1 overflow-y-auto"
           style={{ scrollbarWidth: "thin", scrollbarColor: "#333 transparent" }}
         >
-          {cart.length === 0 ? (
+          {items.length === 0 ? (
             <div className="flex flex-col items-center justify-center px-6 py-20">
-              <ShoppingCart className="h-10 w-10" style={{ color: "#222" }} />
-              <p className="mt-4 font-mono text-[11px] tracking-[0.1em]" style={{ color: "#555" }}>
+              <ShoppingCart className="h-10 w-10 text-white/20" />
+              <p className="mt-4 font-mono text-[11px] tracking-[0.1em] text-white/40">
                 Your evidence locker is empty
               </p>
               <button
                 onClick={() => setCartOpen(false)}
-                className="mt-5 rounded-lg border px-5 py-2 font-mono text-[10px] tracking-[0.1em] uppercase transition-colors duration-300"
-                style={{ borderColor: "rgba(255,255,255,0.08)", color: "#888" }}
+                className="mt-5 rounded-lg border border-white/10 px-5 py-2 font-mono text-[10px] tracking-[0.1em] uppercase text-white/70 hover:text-white hover:border-white/30 transition-colors cursor-pointer"
               >
                 Continue Browsing
               </button>
             </div>
           ) : (
-            cart.map((item) => (
+            items.map((item) => (
               <div
-                key={item.product.id}
-                className="flex gap-4 border-b px-6 py-5"
-                style={{ borderColor: "rgba(255,255,255,0.04)" }}
+                key={item.id}
+                className="flex gap-4 border-b border-white/[0.05] px-6 py-5 items-center"
               >
                 <img
-                  src={item.product.image}
-                  alt={item.product.title}
-                  className="h-16 w-16 shrink-0 rounded-xl object-cover"
-                  style={{ border: "1px solid rgba(255,255,255,0.06)" }}
+                  src={item.image}
+                  alt={item.title}
+                  className="h-16 w-16 shrink-0 rounded-xl object-cover border border-white/10 bg-black"
                 />
                 <div className="min-w-0 flex-1">
-                  <p
-                    className="truncate font-display text-[11px] tracking-[0.05em] uppercase"
-                    style={{ color: "#ddd" }}
-                  >
-                    {item.product.caseNumber}
+                  <p className="truncate font-display text-[10px] tracking-[0.08em] uppercase text-blood font-bold">
+                    {item.caseNumber}
                   </p>
-                  <p
-                    className="truncate text-[12px]"
-                    style={{ color: "#999", fontFamily: "Inter" }}
-                  >
-                    {item.product.title}
+                  <p className="truncate text-[12px] text-white/90 font-medium">
+                    {item.title}
                   </p>
-                  <div className="mt-2 flex items-center gap-2">
+                  <div className="mt-2.5 flex items-center gap-2">
                     <button
-                      onClick={() => updateQty(item.product.id, -1)}
-                      className="flex h-6 w-6 items-center justify-center rounded-lg border transition-colors duration-300 hover:border-[rgba(200,29,36,0.3)]"
-                      style={{ borderColor: "rgba(255,255,255,0.08)", color: "#888" }}
+                      onClick={() => updateQuantity(item.id, -1)}
+                      className="flex h-6 w-6 items-center justify-center rounded-lg border border-white/10 text-white/60 hover:border-blood/40 hover:text-white transition-colors cursor-pointer"
                     >
                       <Minus className="h-3 w-3" />
                     </button>
-                    <span
-                      className="w-6 text-center font-mono text-[11px]"
-                      style={{ color: "#ddd" }}
-                    >
-                      {item.qty}
+                    <span className="w-6 text-center font-mono text-[11px] text-white">
+                      {item.quantity}
                     </span>
                     <button
-                      onClick={() => updateQty(item.product.id, 1)}
-                      className="flex h-6 w-6 items-center justify-center rounded-lg border transition-colors duration-300 hover:border-[rgba(200,29,36,0.3)]"
-                      style={{ borderColor: "rgba(255,255,255,0.08)", color: "#888" }}
+                      onClick={() => updateQuantity(item.id, 1)}
+                      className="flex h-6 w-6 items-center justify-center rounded-lg border border-white/10 text-white/60 hover:border-blood/40 hover:text-white transition-colors cursor-pointer"
                     >
                       <Plus className="h-3 w-3" />
                     </button>
                   </div>
                 </div>
-                <div className="flex flex-col items-end justify-between">
+                <div className="flex flex-col items-end justify-between self-stretch">
                   <button
-                    onClick={() => removeFromCart(item.product.id)}
-                    className="flex h-6 w-6 items-center justify-center rounded-full transition-colors duration-300 hover:bg-[rgba(200,29,36,0.1)]"
-                    style={{ color: "#555" }}
+                    onClick={() => removeFromCart(item.id)}
+                    className="flex h-6 w-6 items-center justify-center rounded-full text-white/40 hover:text-red-400 transition-colors cursor-pointer"
                   >
                     <X className="h-3.5 w-3.5" />
                   </button>
-                  <span className="font-display text-[14px] font-bold" style={{ color: "#C81D24" }}>
-                    {fmt(item.product.price * item.qty)}
+                  <span className="font-display text-[14px] font-bold text-white">
+                    {fmt(item.price * item.quantity)}
                   </span>
                 </div>
               </div>
@@ -1335,60 +1358,36 @@ function StorePage() {
         </div>
 
         {/* drawer footer with totals */}
-        {cart.length > 0 && (
-          <div
-            className="border-t px-6 py-5"
-            style={{ borderColor: "rgba(255,255,255,0.06)", background: "rgba(9,9,9,0.95)" }}
-          >
-            <div className="flex flex-col gap-2">
-              {[
-                { label: "Subtotal", value: fmt(subtotal) },
-                { label: "Shipping", value: "FREE", accent: true },
-                { label: "Taxes (GST 18%)", value: fmt(taxes) },
-              ].map(({ label, value, accent }) => (
-                <div key={label} className="flex justify-between font-mono text-[10px]">
-                  <span style={{ color: "#777" }}>{label}</span>
-                  <span style={{ color: accent ? "#4ade80" : "#bbb" }}>{value}</span>
-                </div>
-              ))}
+        {items.length > 0 && (
+          <div className="border-t border-white/10 px-6 py-5 bg-[#0a0a0a]">
+            <div className="flex flex-col gap-2 font-mono text-[11px]">
+              <div className="flex justify-between text-white/60">
+                <span>Subtotal</span>
+                <span className="text-white">{fmt(subtotal)}</span>
+              </div>
+              <div className="flex justify-between text-white/60">
+                <span>Shipping</span>
+                <span className="text-emerald-400 font-bold">{subtotal >= 1499 ? "FREE" : "₹99"}</span>
+              </div>
             </div>
-            <div
-              className="mt-3 flex justify-between border-t pt-3"
-              style={{ borderColor: "rgba(255,255,255,0.06)" }}
-            >
-              <span
-                className="font-mono text-[11px] tracking-[0.1em] uppercase"
-                style={{ color: "#aaa" }}
-              >
-                Total
+
+            <div className="mt-3.5 flex justify-between border-t border-white/10 pt-3.5 items-center">
+              <span className="font-mono text-[11px] tracking-[0.1em] uppercase text-white/70">
+                Total Amount
               </span>
-              <span
-                className="font-display text-[22px] font-bold"
-                style={{ color: "#C81D24", fontFamily: "Space Grotesk, Inter, sans-serif" }}
-              >
-                {fmt(total)}
+              <span className="font-display text-[22px] font-bold text-blood">
+                {fmt(subtotal + (subtotal >= 1499 ? 0 : 99))}
               </span>
             </div>
 
-            <button
-              className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl py-4 font-display text-[12px] tracking-[0.2em] uppercase transition-all duration-500"
-              style={{
-                background: "linear-gradient(135deg, #7A0F13 0%, #A11418 100%)",
-                color: "#fff",
-                border: "1px solid rgba(200,29,36,0.3)",
-                boxShadow: "0 0 30px rgba(122,15,19,0.3), 0 8px 20px rgba(0,0,0,0.4)",
-              }}
+            <Link
+              to="/cart"
+              onClick={() => setCartOpen(false)}
+              className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl py-3.5 font-display text-[12px] tracking-[0.16em] uppercase text-white bg-blood hover:bg-blood/90 transition-all shadow-[0_0_25px_rgba(179,18,23,0.35)] cursor-pointer"
             >
-              <Lock className="h-3.5 w-3.5" />
-              Proceed to Checkout
-            </button>
-
-            <div className="mt-4 flex items-center justify-center gap-2">
-              <Lock className="h-3 w-3" style={{ color: "#555" }} />
-              <span className="text-[9px]" style={{ color: "#555", fontFamily: "Inter" }}>
-                Secure Checkout · SSL Encrypted
-              </span>
-            </div>
+              <span>View Cart & Checkout</span>
+              <ArrowRight className="h-4 w-4" />
+            </Link>
           </div>
         )}
       </div>

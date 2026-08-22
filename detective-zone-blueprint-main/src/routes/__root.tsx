@@ -1,9 +1,11 @@
+
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   Outlet,
   Link,
   createRootRouteWithContext,
   useRouter,
+  useRouterState,
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
@@ -15,6 +17,10 @@ import { RainProvider } from "../components/RainProvider";
 import { Navbar } from "../components/Navbar";
 import { Footer } from "../components/Footer";
 import { SmoothScrollProvider } from "../components/SmoothScroll";
+import { CartProvider } from "../context/CartContext";
+import { PreloaderProvider } from "../context/PreloaderContext";
+import { AdminAuthProvider } from "../context/AdminAuthContext";
+import { WhatsAppFloatingButton } from "../components/WhatsAppFloatingButton";
 
 function NotFoundComponent() {
   return (
@@ -131,28 +137,32 @@ function RootShell({ children }: { children: ReactNode }) {
   );
 }
 
-import { CartProvider } from "../context/CartContext";
-import { PreloaderProvider } from "../context/PreloaderContext";
-
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  const routerState = useRouterState();
+  const pathname = routerState.location.pathname;
+  const isAdminRoute = pathname.startsWith("/admin");
+  const isHomepage = pathname === "/";
+  const showWhatsAppButton = !isAdminRoute && !isHomepage;
 
   return (
     <QueryClientProvider client={queryClient}>
-      <CartProvider>
-        <SmoothScrollProvider>
-          <RainProvider>
-            <PreloaderProvider>
-              <Navbar />
-              <main className="min-h-screen">
-                {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-                <Outlet />
-              </main>
-              <Footer />
-            </PreloaderProvider>
-          </RainProvider>
-        </SmoothScrollProvider>
-      </CartProvider>
+      <AdminAuthProvider>
+        <CartProvider>
+          <SmoothScrollProvider>
+            <RainProvider>
+              <PreloaderProvider>
+                {!isAdminRoute && <Navbar />}
+                <main className="min-h-screen">
+                  <Outlet />
+                </main>
+                {!isAdminRoute && <Footer />}
+                {showWhatsAppButton && <WhatsAppFloatingButton position="bottom-left" />}
+              </PreloaderProvider>
+            </RainProvider>
+          </SmoothScrollProvider>
+        </CartProvider>
+      </AdminAuthProvider>
     </QueryClientProvider>
   );
 }

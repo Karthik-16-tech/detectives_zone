@@ -2,7 +2,12 @@ import { Fingerprint } from "lucide-react";
 
 import alley from "@/assets/evidencce/alley.jpg";
 
-export function QuoteBanner() {
+interface QuoteBannerProps {
+  quote?: string;
+  author?: string;
+}
+
+export function QuoteBanner({ quote, author }: QuoteBannerProps) {
   return (
     <section className="panel grain relative grid grid-cols-1 overflow-hidden lg:grid-cols-[minmax(0,1fr)_460px]">
       <div className="flex items-start gap-7 px-6 py-10 sm:px-10 sm:py-12">
@@ -11,11 +16,19 @@ export function QuoteBanner() {
         </span>
         <blockquote className="min-w-0">
           <p className="font-display text-2xl leading-snug">
-            The <span className="text-primary">truth</span> is buried under layers of lies.
-            <br />
-            Only the sharpest mind can dig it out.&rdquo;
+            {quote ? (
+              quote
+            ) : (
+              <>
+                The <span className="text-primary">truth</span> is buried under layers of lies.
+                <br />
+                Only the sharpest mind can dig it out.&rdquo;
+              </>
+            )}
           </p>
-          <footer className="label-xs mt-5 text-muted-foreground">— Detective Zone</footer>
+          <footer className="label-xs mt-5 text-muted-foreground">
+            {author || "— Detective Zone"}
+          </footer>
         </blockquote>
       </div>
 

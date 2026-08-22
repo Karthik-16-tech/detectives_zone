@@ -1,30 +1,34 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowLeft, Star, Lock } from "lucide-react";
+import { useState, useEffect } from "react";
+import { api } from "@/lib/api";
 
-import caseVoicemail from "@/assets/case-voicemail.png";
-import caseWitness from "@/assets/case-witness.png";
-import caseLetter from "@/assets/case-letter.png";
-import caseHeir from "@/assets/case-heir.png";
-import caseExperiment from "@/assets/case-experiment.png";
-import caseBetrayal from "@/assets/case-betrayal.png";
-import corkboard from "@/assets/evidencce/corkboard.jpg";
-import e01 from "@/assets/evidencce/e-01.jpg";
-import e02 from "@/assets/evidencce/e-02.jpg";
-import e03 from "@/assets/evidencce/e-03.jpg";
-import e04 from "@/assets/evidencce/e-04.jpg";
-import e05 from "@/assets/evidencce/e-05.jpg";
-import e06 from "@/assets/evidencce/e-06.jpg";
-import e07 from "@/assets/evidencce/e-07.jpg";
-import e08 from "@/assets/evidencce/e-08.jpg";
-import e09 from "@/assets/evidencce/e-09.jpg";
-import e10 from "@/assets/evidencce/e-10.jpg";
-import e11 from "@/assets/evidencce/e-11.jpg";
-import e12 from "@/assets/evidencce/e-12.jpg";
+import { S3_MEDIA } from "@/lib/media";
+
+const caseVoicemail = S3_MEDIA.cases.caseVoicemail;
+const caseWitness = S3_MEDIA.cases.caseWitness;
+const caseLetter = S3_MEDIA.cases.caseLetter;
+const caseHeir = S3_MEDIA.cases.caseHeir;
+const caseExperiment = S3_MEDIA.cases.caseExperiment;
+const caseBetrayal = S3_MEDIA.cases.caseBetrayal;
+const corkboard = S3_MEDIA.evidence.corkboard;
+const e01 = S3_MEDIA.evidence.e01;
+const e02 = S3_MEDIA.evidence.e02;
+const e03 = S3_MEDIA.evidence.e03;
+const e04 = S3_MEDIA.evidence.e04;
+const e05 = S3_MEDIA.evidence.e05;
+const e06 = S3_MEDIA.evidence.e06;
+const e07 = S3_MEDIA.evidence.e07;
+const e08 = S3_MEDIA.evidence.e08;
+const e09 = S3_MEDIA.evidence.e09;
+const e10 = S3_MEDIA.evidence.e10;
+const e11 = S3_MEDIA.evidence.e11;
+const e12 = S3_MEDIA.evidence.e12;
 import { EvidenceWall, type EvidencePin } from "@/components/templates/evidence-wall";
 import { HeroVideoCard } from "@/components/templates/hero-video-card";
 import { InvestigationModules } from "@/components/templates/investigation-modules";
 import { QuoteBanner } from "@/components/templates/quote-banner";
-import case001Video from "@/assets/Untitled design (5).mp4";
+const case001Video = S3_MEDIA.heroVideo;
 
 export const Route = createFileRoute("/cases/$caseId")({
   component: CaseDetailPage,
@@ -73,7 +77,7 @@ const caseFiles: Record<string, CaseFile> = {
       {
         id: "card",
         x: 45,
-        y: 18,
+        y: 24,
         label: "Business Card",
         note: "Found under the desk. Dated the night before.",
         image: e02,
@@ -345,7 +349,57 @@ const caseFiles: Record<string, CaseFile> = {
 
 function CaseDetailPage() {
   const { caseId } = Route.useParams();
-  const file = caseFiles[caseId];
+  const initialFile = caseFiles[caseId] || caseFiles["001"];
+  const [file, setFile] = useState<CaseFile>(initialFile);
+  const [pageData, setPageData] = useState<any>(null);
+
+  useEffect(() => {
+    Promise.all([
+      api.getCase(caseId).catch(() => null),
+      api.getCasePage(caseId).catch(() => null),
+    ]).then(([cData, pData]) => {
+      if (cData) {
+        setFile((prev) => ({
+          ...prev,
+          title: cData.title || prev.title,
+          description: cData.short_description || cData.intro_text || prev.description,
+          status: (cData.status as any) || prev.status,
+          difficulty: cData.difficulty || prev.difficulty,
+          duration: cData.estimated_duration || prev.duration,
+          stars: cData.rating ? Math.round(cData.rating) : prev.stars,
+          image: cData.cover_image || prev.image,
+        }));
+      }
+
+      if (pData) {
+        setPageData(pData);
+        setFile((prev) => {
+          // If custom pins are configured in CMS, map them to EvidencePin objects
+          let customPins: EvidencePin[] = prev.pins;
+          if (pData.evidence_pins && pData.evidence_pins.length > 0) {
+            const fallbackImages = [e01, e02, e03, e04, e05, e06, e07, e08, e09, e10, e11, e12];
+            customPins = pData.evidence_pins.map((p: any, idx: number) => ({
+              id: p.id || `pin_${idx}`,
+              x: p.x,
+              y: p.y,
+              label: p.label,
+              note: p.note,
+              image: p.image_url || fallbackImages[idx % fallbackImages.length],
+            }));
+          }
+
+          return {
+            ...prev,
+            caseType: pData.case_type || prev.caseType,
+            dateOfIncident: pData.date_of_incident || prev.dateOfIncident,
+            location: pData.location || prev.location,
+            pins: customPins,
+            description: pData.hero_subtitle || prev.description,
+          };
+        });
+      }
+    });
+  }, [caseId]);
 
   if (!file) {
     return <CaseNotFound />;
@@ -369,22 +423,25 @@ function CaseDetailPage() {
     { label: "Location", value: file.location },
   ];
 
-  return (
-    <div className="min-h-screen bg-[#050505] text-[#C7C7C7] font-sans pt-[72px] relative overflow-hidden">
-      <div
-        className="pointer-events-none absolute inset-0 z-0 opacity-[0.04]"
-        style={{
-          backgroundImage: `
-            linear-gradient(rgba(255, 255, 255, 1) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(255, 255, 255, 1) 1px, transparent 1px)
-          `,
-          backgroundSize: "40px 40px",
-        }}
-      />
+  // Dynamic Video: CMS configured URL or default video for 001
+  const activeHeroVideo = pageData?.hero_video_url || (file.id === "001" ? case001Video : undefined);
 
+  // Dynamic modules mapping
+  const activeModules = pageData?.investigation_modules && pageData.investigation_modules.length > 0
+    ? pageData.investigation_modules.map((m: any, idx: number) => ({
+        n: idx + 1,
+        icon: m.icon,
+        title: m.heading,
+        desc: m.body,
+        pct: m.pct !== undefined ? m.pct : [75, 60, 45, 30, 40, 50, 35, 20][idx % 8],
+      }))
+    : undefined;
+
+  return (
+    <div className="min-h-screen bg-[#000000] text-[#C7C7C7] font-sans pt-[72px] relative overflow-hidden">
       <div className="relative z-10 mx-auto max-w-[1440px] px-4 py-10 sm:px-6 lg:px-8">
         {/* PAGE HEADER */}
-        <header className="flex flex-col md:flex-row justify-between items-start md:items-end border-b border-[#1A1A1A]/80 pb-7 mb-8 gap-4">
+        <header className="flex flex-col md:flex-row justify-between items-start md:items-end pb-7 mb-8 gap-4">
           <div className="font-mono text-[10px] tracking-[2px] text-muted-foreground uppercase">
             <Link to="/" className="hover:text-white transition-colors duration-300">
               Home
@@ -470,7 +527,7 @@ function CaseDetailPage() {
         </section>
 
         {/* CASE INTRO VIDEO */}
-        <HeroVideoCard videoSrc={file.id === "001" ? case001Video : undefined} />
+        <HeroVideoCard videoSrc={activeHeroVideo} />
 
         {/* EVIDENCE WALL */}
         <section className="border-t border-[#1A1A1A]/80 pt-10">
@@ -494,7 +551,7 @@ function CaseDetailPage() {
             <EvidenceWall
               pins={file.pins}
               links={file.links}
-              image={corkboard}
+              image={pageData?.evidence_wall_bg_url || corkboard}
               imageAlt="Corkboard evidence board"
               height="min(560px, 130vw)"
               accent="#D32F2F"
@@ -547,12 +604,12 @@ function CaseDetailPage() {
 
         {/* INVESTIGATION MODULES */}
         <section className="mt-8">
-          <InvestigationModules />
+          <InvestigationModules modules={activeModules} />
         </section>
 
         {/* QUOTE BANNER */}
         <section className="mt-8">
-          <QuoteBanner />
+          <QuoteBanner quote={pageData?.quote_text} author={pageData?.quote_author} />
         </section>
       </div>
     </div>

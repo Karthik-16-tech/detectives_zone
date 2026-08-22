@@ -1,7 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowLeft, MapPin } from "lucide-react";
 
-import corkboard from "@/assets/evidencce/corkboard.jpg";
+import { S3_MEDIA } from "@/lib/media";
+const corkboard = S3_MEDIA.evidence.corkboard;
 import { EVIDENCE, EVIDENCE_LINKS } from "@/components/templates/evidence-data";
 import { EvidenceWall, type EvidencePin } from "@/components/templates/evidence-wall";
 

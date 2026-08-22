@@ -17,6 +17,7 @@
  */
 
 import React, { useEffect, useRef, useState } from "react";
+import { api } from "@/lib/api";
 
 import supportScene from "@/assets/support-scene.jpg";
 import hqScene from "@/assets/hq-scene.jpg";
@@ -236,23 +237,23 @@ const METHODS = [
 const FAQS = [
   {
     q: "Do I need the physical box to play the digital cases?",
-    a: "No. Every case is fully playable online from the Cases page. The physical kit adds the collectible evidence box, printed files and props — your digital file unlocks when you register the kit code in the store.",
+    a: "No. Every case is fully playable online through our interactive Case Dossiers with digital evidence, autopsy reports, suspect interviews, and audio wiretaps. Purchasing a physical Case Kit delivers the deluxe collector's locker, wax-sealed police files, physical fingerprints, and rotating cipher discs for the ultimate real-world investigation experience.",
   },
   {
     q: "Will my progress save if I close the browser?",
-    a: "Yes. Deductions, solved mysteries and notes are stored to your account automatically, so you can close the case and reopen it exactly where you left off.",
+    a: "Yes. Your deductions, solved crime scene clues, field notes, and interactive mystery progress are stored automatically in your investigator terminal session, so you can step away from the crime scene and resume your investigation anytime without losing your place.",
   },
   {
     q: "Is shipping really free, and how long does delivery take?",
-    a: "Yes — shipping and taxes are included across India. Case kits leave the evidence vault within 24 hours and arrive in 3–7 working days with a tracking link.",
+    a: "Yes — 100% Free Express Shipping is included on all Case Kit orders across India. Orders are hand-packed with tamper-evident evidence seals within 24 hours and delivered via BlueDart Express in 3–5 business days with real-time tracking.",
   },
   {
     q: "How does the challenge discount work at checkout?",
-    a: "Solve all three mysteries in the Challenge section to unlock the code DZ25-SOLVED (25% off). Enter it in the cart before paying — the discount applies instantly.",
+    a: "Solve all three mysteries in the Room 104 Crime Scene Challenge to unlock the classified promo code DZ25-SOLVED for 25% OFF. Enter the code in your cart or checkout page, and the discount will apply instantly to your total order amount.",
   },
   {
     q: "Can I replay a case after solving it?",
-    a: "Absolutely. Solved cases stay in your evidence locker forever and can be replayed anytime. Your old deductions and notes remain on file for comparison.",
+    a: "Absolutely! Once closed, case files remain accessible in your Evidence Locker forever. You can re-examine crime scene photographs, re-read suspect transcripts, or pass the physical evidence dossier to friends and family for mystery game nights.",
   },
 ];
 
@@ -695,6 +696,116 @@ export default function DetectiveContactPage({ embedded = false }: { embedded?: 
   const [submitting, setSubmitting] = useState(false);
   const [toasts, setToasts] = useState<Toast[]>([]);
 
+  // Live Contact & Desk CMS Settings
+  const [channelsData, setChannelsData] = useState({
+    kicker: "Direct channels",
+    title: "Four ways to reach",
+    accent: "the desk",
+    list: [
+      {
+        file: "FILE // 001",
+        Icon: IconMail,
+        title: "Encrypted Dispatch",
+        lines: ["investigations@detectivezone.com", "Average response: under 2 hours", "PGP Key ID: 0x8F3A29B1"],
+      },
+      {
+        file: "FILE // 002",
+        Icon: IconPhone,
+        title: "Secure Line",
+        lines: ["+91 63057 29867", "Mon–Sun · 09:00 — 21:00 IST", "Direct line, priority response"],
+      },
+      {
+        file: "FILE // 003",
+        Icon: IconPin,
+        title: "Field Headquarters",
+        lines: ["221B Baker St. Complex", "Suite 404, New York, NY 10001", "By appointment or priority case only"],
+      },
+      {
+        file: "FILE // 004",
+        Icon: IconClock,
+        title: "Urgent Deadlines",
+        lines: ["case-alert@detectivezone.com", "24/7 on-call dispatch desk", "Immediate field routing"],
+      },
+    ],
+  });
+
+  const [formConfig, setFormConfig] = useState({
+    kicker: "Confidential report",
+    title: "Open a new",
+    accent: "case",
+    description: "All fields are encrypted before they leave your device. Provide as much detail as the file allows.",
+    supportPhone: "+91 63057 29867",
+    supportHours: "Mon–Sun · 09:00 — 21:00 IST",
+  });
+
+  useEffect(() => {
+    // Load live CMS settings from backend
+    api.getSettings()
+      .then((settings) => {
+        if (settings && Object.keys(settings).length > 0) {
+          setChannelsData({
+            kicker: settings.contact_section_kicker || "Direct channels",
+            title: settings.contact_section_title || "Four ways to reach",
+            accent: settings.contact_section_accent || "the desk",
+            list: [
+              {
+                file: settings.contact_ch1_file || "FILE // 001",
+                Icon: IconMail,
+                title: settings.contact_ch1_title || "Encrypted Dispatch",
+                lines: [
+                  settings.contact_ch1_line1 || "investigations@detectivezone.com",
+                  settings.contact_ch1_line2 || "Average response: under 2 hours",
+                  settings.contact_ch1_line3 || "PGP Key ID: 0x8F3A29B1",
+                ],
+              },
+              {
+                file: settings.contact_ch2_file || "FILE // 002",
+                Icon: IconPhone,
+                title: settings.contact_ch2_title || "Secure Line",
+                lines: [
+                  settings.contact_ch2_line1 || "+91 63057 29867",
+                  settings.contact_ch2_line2 || "Mon–Sun · 09:00 — 21:00 IST",
+                  settings.contact_ch2_line3 || "Direct line, priority response",
+                ],
+              },
+              {
+                file: settings.contact_ch3_file || "FILE // 003",
+                Icon: IconPin,
+                title: settings.contact_ch3_title || "Field Headquarters",
+                lines: [
+                  settings.contact_ch3_line1 || "221B Baker St. Complex",
+                  settings.contact_ch3_line2 || "Suite 404, New York, NY 10001",
+                  settings.contact_ch3_line3 || "By appointment or priority case only",
+                ],
+              },
+              {
+                file: settings.contact_ch4_file || "FILE // 004",
+                Icon: IconClock,
+                title: settings.contact_ch4_title || "Urgent Deadlines",
+                lines: [
+                  settings.contact_ch4_line1 || "case-alert@detectivezone.com",
+                  settings.contact_ch4_line2 || "24/7 on-call dispatch desk",
+                  settings.contact_ch4_line3 || "Immediate field routing",
+                ],
+              },
+            ],
+          });
+
+          setFormConfig({
+            kicker: settings.contact_form_kicker || "Confidential report",
+            title: settings.contact_form_title || "Open a new",
+            accent: settings.contact_form_accent || "case",
+            description: settings.contact_form_desc || "All fields are encrypted before they leave your device. Provide as much detail as the file allows.",
+            supportPhone: settings.contact_support_phone || "+91 63057 29867",
+            supportHours: settings.contact_support_hours || "Mon–Sun · 09:00 — 21:00 IST",
+          });
+        }
+      })
+      .catch(() => {
+        // use defaults
+      });
+  }, []);
+
   useEffect(() => {
     let raf = 0;
     const onScroll = () => {
@@ -722,18 +833,39 @@ export default function DetectiveContactPage({ embedded = false }: { embedded?: 
     setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 4200);
   };
 
-  const onCaseSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const onCaseSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const form = e.currentTarget;
+    const formData = new FormData(form);
+    
+    const name = String(formData.get("name") || "");
+    const email = String(formData.get("email") || "");
+    const phone = String(formData.get("phone") || "");
+    const type = String(formData.get("type") || "General Case Inquiry");
+    const subject = String(formData.get("subject") || "");
+    const message = String(formData.get("message") || "");
+
     setSubmitting(true);
-    setTimeout(() => {
-      setSubmitting(false);
+    try {
+      await api.sendContactMessage({
+        name,
+        email,
+        phone,
+        subject: `[${type}] ${subject}`,
+        message,
+        case_interest: type,
+      });
+
       form.reset();
       pushToast(
-        "Case filed",
-        "Reference DZ-4471 assigned. A detective will respond within 12 hours.",
+        "Case Report Encrypted & Filed",
+        `Reference DZ-${Math.floor(1000 + Math.random() * 9000)} assigned. Central dispatch will route to a detective shortly.`
       );
-    }, 900);
+    } catch (err: any) {
+      pushToast("Filing Error", err.message || "Failed to transmit report. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -898,12 +1030,16 @@ export default function DetectiveContactPage({ embedded = false }: { embedded?: 
           </div>
         </section>
 
-        {/* ---------------- CONTACT METHODS ---------------- */}
+        {/* ---------------- CONTACT METHODS (FOUR WAYS TO REACH THE DESK) ---------------- */}
         <section className="dz-block">
           <div className="dz-wrap">
-            <SectionHeading kicker="Direct channels" title="Four ways to reach" accent="the desk" />
+            <SectionHeading
+              kicker={channelsData.kicker}
+              title={channelsData.title}
+              accent={channelsData.accent}
+            />
             <div className="dz-grid4">
-              {METHODS.map((m, i) => (
+              {channelsData.list.map((m, i) => (
                 <Reveal key={m.title} delay={i * 90}>
                   <div className="dz-shell">
                     <div className="dz-core dz-card">
@@ -945,7 +1081,7 @@ export default function DetectiveContactPage({ embedded = false }: { embedded?: 
           </div>
         </section>
 
-        {/* ---------------- FORM + SUPPORT ---------------- */}
+        {/* ---------------- FORM + SUPPORT (CONFIDENTIAL REPORT: OPEN A NEW CASE) ---------------- */}
         <section id="case-form" className="dz-block" style={{ paddingTop: 0 }}>
           <div className="dz-split">
             <Reveal>
@@ -958,10 +1094,10 @@ export default function DetectiveContactPage({ embedded = false }: { embedded?: 
                 >
                   <div className="dz-eyebrow">
                     <span className="dz-rule" />
-                    <span className="dz-kicker">Confidential report</span>
+                    <span className="dz-kicker">{formConfig.kicker}</span>
                   </div>
                   <h2 style={{ marginTop: 26, fontSize: "clamp(2.8rem,5vw,4rem)" }}>
-                    Open a new <span className="dz-red">case</span>
+                    {formConfig.title} <span className="dz-red">{formConfig.accent}</span>
                   </h2>
                   <p
                     style={{
@@ -972,8 +1108,7 @@ export default function DetectiveContactPage({ embedded = false }: { embedded?: 
                       color: "var(--muted)",
                     }}
                   >
-                    All fields are encrypted before they leave your device. Provide as much detail
-                    as the file allows.
+                    {formConfig.description}
                   </p>
 
                   <form onSubmit={onCaseSubmit} style={{ marginTop: 44, display: "grid", gap: 22 }}>
@@ -1141,7 +1276,7 @@ export default function DetectiveContactPage({ embedded = false }: { embedded?: 
                         ["Response time", "Under 12 hours"],
                         ["Live status", "Desk open · 3 detectives"],
                         ["Support email", "support@detectivezone.io"],
-                        ["Priority line", "+1 (212) 555-0199"],
+                        ["Priority line", "+91 63057 29867"],
                       ].map(([k, v]) => (
                         <div key={k}>
                           <dt className="dz-dt">{k}</dt>

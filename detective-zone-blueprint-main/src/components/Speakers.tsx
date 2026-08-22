@@ -2,10 +2,12 @@ import { AnimatePresence, motion } from "motion/react";
 import { Star } from "lucide-react";
 import { useState } from "react";
 
-import speakerMain from "@/assets/testimonals/speaker-main.jpg";
-import speaker2 from "@/assets/testimonals/speaker-2.jpg";
-import speaker3 from "@/assets/testimonals/speaker-3.jpg";
-import speaker4 from "@/assets/testimonals/speaker-4.jpg";
+import { S3_MEDIA } from "@/lib/media";
+
+const testimonialFamily = S3_MEDIA.testimonials.family;
+const testimonialCouple = S3_MEDIA.testimonials.couple;
+const testimonialFriends = S3_MEDIA.testimonials.friends;
+const testimonialBirthday = S3_MEDIA.testimonials.birthday;
 
 type Speaker = {
   name: string;
@@ -17,32 +19,25 @@ type Speaker = {
 
 const speakers: Speaker[] = [
   {
-    name: "Aarav Rao",
-    role: "Detective · 12 Cases Closed",
-    desc: "Every evidence box shipped exactly as the case file promised. The room key clue had me stuck for an hour — then the puzzle snapped into place. Genuinely the best mystery I've solved.",
-    img: speakerMain,
-    thumb: speakerMain,
+    name: "Sravani Reddy",
+    role: "🏠 Family Evening",
+    desc: "Amma was the first to crack the coded letter, amma! We all thought it was just a game — three hours later none of us had moved from the table. The case file felt impossibly real.",
+    img: testimonialFamily,
+    thumb: testimonialFamily,
   },
   {
-    name: "Meera Iyer",
-    role: "Forensic Consultant · Case 002",
-    desc: "The fingerprint files and time-stamped evidence make you feel like you're sitting in the interrogation room. I've worked every case and the final twist still got me.",
-    img: speaker2,
-    thumb: speaker2,
+    name: "Venkat & Divya",
+    role: "🌙 Anniversary Night In",
+    desc: "We cancelled dinner plans for this and it was absolutely the right call. Divya solved the alibi clue before I even finished reading it. Honestly humbling. Ten out of ten.",
+    img: testimonialCouple,
+    thumb: testimonialCouple,
   },
   {
-    name: "Vikram Singh",
-    role: "Private Investigator",
-    desc: "Detective Zone respects the craft. No hand-holding, just a sealed case file and your own deductions. It sharpens the exact instincts I rely on out in the field.",
-    img: speaker3,
-    thumb: speaker3,
-  },
-  {
-    name: "Zoya Khan",
-    role: "Cold Case Specialist",
-    desc: "From the voicemail to the pocket watch, every detail is a planted clue. I cracked Case 001 at 3AM and honestly? Worth every lost hour of sleep.",
-    img: speaker4,
-    thumb: speaker4,
+    name: "Abhiram & Gang",
+    role: "🍺 Boys Night Mystery",
+    desc: "Six engineers could not crack the cipher for forty minutes. Embarrassing. But when it finally clicked — we screamed. The whole building must have heard us. Worth every rupee.",
+    img: testimonialFriends,
+    thumb: testimonialFriends,
   },
 ];
 
@@ -85,7 +80,7 @@ export function Speakers() {
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-                className="h-[340px] w-full object-contain sm:h-[440px] lg:h-[520px]"
+                className="h-[340px] w-full object-cover sm:h-[440px] lg:h-[520px]"
               />
             </AnimatePresence>
             <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/85 via-transparent to-transparent" />

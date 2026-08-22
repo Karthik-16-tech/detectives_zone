@@ -125,7 +125,7 @@ function AdminPaymentsPage() {
 
   const webhookUrl = typeof window !== "undefined"
     ? `${window.location.origin}/api/v1/payments/phonepe/webhook`
-    : "http://13.61.187.145/api/v1/payments/phonepe/webhook";
+    : "https://api.detectiveszone.com/api/v1/payments/phonepe/webhook";
 
   const handleCopyWebhook = () => {
     navigator.clipboard.writeText(webhookUrl);

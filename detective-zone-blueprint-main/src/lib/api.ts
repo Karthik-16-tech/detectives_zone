@@ -313,4 +313,32 @@ export const api = {
     apiRequest("/orders/admin/email/test", { method: "POST" }),
   adminDeleteOrder: (orderId: number) =>
     apiRequest(`/orders/admin/${orderId}`, { method: "DELETE" }),
+
+  // Media Management
+  getMediaList: (type?: string) =>
+    apiRequest<any[]>(`/media${type && type !== "all" ? `?type=${type}` : ""}`),
+  deleteMedia: (id: number) =>
+    apiRequest(`/media/${id}`, { method: "DELETE" }),
+
+  // Contact / Inbox Management
+  getInboxAdmin: (status?: string) =>
+    apiRequest<any[]>(`/inbox/admin${status && status !== "ALL" ? `?status=${status}` : ""}`),
+  updateMessageStatus: (id: number, status: string) =>
+    apiRequest(`/inbox/admin/${id}/status`, { method: "PATCH", body: JSON.stringify({ status }) }),
+  deleteMessage: (id: number) =>
+    apiRequest(`/inbox/admin/${id}`, { method: "DELETE" }),
+
+  // Case Subsections & Evidence
+  addCaseSection: (caseId: number, data: any) =>
+    apiRequest(`/cases/${caseId}/sections`, { method: "POST", body: JSON.stringify(data) }),
+  deleteCaseSection: (sectionId: number) =>
+    apiRequest(`/cases/sections/${sectionId}`, { method: "DELETE" }),
+  addCaseEvidence: (caseId: number, data: any) =>
+    apiRequest(`/cases/${caseId}/evidence`, { method: "POST", body: JSON.stringify(data) }),
+  deleteCaseEvidence: (evidenceId: number) =>
+    apiRequest(`/cases/evidence/${evidenceId}`, { method: "DELETE" }),
+  addCaseClue: (caseId: number, data: any) =>
+    apiRequest(`/cases/${caseId}/clues`, { method: "POST", body: JSON.stringify(data) }),
+  deleteCaseClue: (clueId: number) =>
+    apiRequest(`/cases/clues/${clueId}`, { method: "DELETE" }),
 };

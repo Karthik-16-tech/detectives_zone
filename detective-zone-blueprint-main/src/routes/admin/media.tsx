@@ -69,7 +69,7 @@ function AdminMedia() {
   const handleCopyUrl = (item: any) => {
     const fullUrl = item.file_url.startsWith("http")
       ? item.file_url
-      : `http://127.0.0.1:8000${item.file_url}`;
+      : `http://13.61.187.145${item.file_url}`;
     navigator.clipboard.writeText(fullUrl);
     setCopiedId(item.id);
     setTimeout(() => setCopiedId(null), 2000);
@@ -159,7 +159,7 @@ function AdminMedia() {
             const isImg = item.file_type === "image";
             const fullUrl = item.file_url.startsWith("http")
               ? item.file_url
-              : `http://127.0.0.1:8000${item.file_url}`;
+              : `http://13.61.187.145${item.file_url}`;
 
             return (
               <div

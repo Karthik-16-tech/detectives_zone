@@ -3,7 +3,9 @@
 const API_BASE_URL =
   (typeof import.meta !== "undefined" && import.meta.env && import.meta.env.VITE_API_URL)
     ? import.meta.env.VITE_API_URL
-    : "http://13.61.187.145/api/v1";
+    : (typeof window !== "undefined" && window.location.protocol === "https:")
+      ? "/api/v1"
+      : "http://13.61.187.145/api/v1";
 
 export function getAuthToken(): string | null {
   if (typeof window === "undefined") return null;

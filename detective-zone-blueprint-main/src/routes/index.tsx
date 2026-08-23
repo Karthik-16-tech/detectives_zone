@@ -399,13 +399,24 @@ function Home() {
     return () => clearInterval(t);
   }, []);
 
+  // Use local pre-bundled video for zero-latency 60fps scrubbing unless an explicit custom URL is provided
+  const activeHeroVideo =
+    cmsSettings.hero_video_url &&
+    !cmsSettings.hero_video_url.includes("detective-scrub-fast.mp4")
+      ? cmsSettings.hero_video_url
+      : detectiveHeroVideo;
+
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
 
-    // Ensure video is buffered for instant seeking
+    // Ensure video is buffered and decoded immediately on first load
     video.preload = "auto";
     video.muted = true;
+    video.playsInline = true;
+
+    // Kickstart video decoding so the frame renders instantly without refresh
+    video.play().catch(() => {});
 
     // Normalized progress 0..1
     let targetProgress = 0.5;
@@ -416,10 +427,12 @@ function Home() {
     const onReady = () => {
       const d = video.duration;
       if (!Number.isFinite(d) || d <= 0) return;
-      try {
-        video.currentTime = d * 0.5;
-      } catch {
-        /* noop */
+      if (!didFirstMove) {
+        try {
+          video.currentTime = d * 0.5;
+        } catch {
+          /* noop */
+        }
       }
     };
 
@@ -427,6 +440,7 @@ function Home() {
       onReady();
     }
     video.addEventListener("loadedmetadata", onReady);
+    video.addEventListener("canplay", onReady);
 
     const seekToCurrent = () => {
       if (!video) return;
@@ -514,26 +528,20 @@ function Home() {
     return () => {
       cancelAnimationFrame(raf);
       video.removeEventListener("loadedmetadata", onReady);
+      video.removeEventListener("canplay", onReady);
       video.removeEventListener("seeked", onSeeked);
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("mousemove", onMove);
       window.removeEventListener("touchmove", onTouch);
       window.removeEventListener("touchstart", onTouch);
     };
-  }, []);
+  }, [activeHeroVideo]);
 
   useEffect(() => {
     const onScroll = () => setOffset(window.scrollY);
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
-
-  // Use local pre-bundled video for zero-latency 60fps scrubbing unless an explicit custom URL is provided
-  const activeHeroVideo =
-    cmsSettings.hero_video_url &&
-    !cmsSettings.hero_video_url.includes("detective-scrub-fast.mp4")
-      ? cmsSettings.hero_video_url
-      : detectiveHeroVideo;
 
   return (
     <div>

@@ -1,9 +1,9 @@
 // API Client for Detective Zone Backend (Unified Domain Routing)
 
 const API_BASE_URL =
-  (typeof import.meta !== "undefined" && import.meta.env && import.meta.env.VITE_API_URL)
+  typeof import.meta !== "undefined" && import.meta.env && import.meta.env.VITE_API_URL
     ? import.meta.env.VITE_API_URL
-    : "/api/v1";
+    : "https://api.detectiveszone.com/api/v1";
 
 export function getAuthToken(): string | null {
   if (typeof window === "undefined") return null;

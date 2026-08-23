@@ -1,5 +1,7 @@
 import { ArrowRight } from "lucide-react";
-import noirImage from "@/assets/cases/case-voicemail.png";
+import { S3_MEDIA } from "@/lib/media";
+
+const noirImage = S3_MEDIA.cases.caseVoicemail;
 import { AudioPlayer } from "@/components/AudioPlayer";
 import { CaseStamp } from "@/components/CaseStamp";
 import { PaperClip } from "@/components/PaperClip";

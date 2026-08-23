@@ -1,6 +1,7 @@
 import { Fingerprint } from "lucide-react";
+import { S3_MEDIA } from "@/lib/media";
 
-import alley from "@/assets/evidencce/alley.jpg";
+const alley = S3_MEDIA.evidence.alley;
 
 interface QuoteBannerProps {
   quote?: string;

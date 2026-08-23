@@ -1,6 +1,8 @@
 import { useState, useRef } from "react";
 import { Play, Maximize2 } from "lucide-react";
-import hero from "@/assets/noir-street.jpg";
+import { S3_MEDIA } from "@/lib/media";
+
+const hero = S3_MEDIA.noirStreet;
 
 interface HeroVideoCardProps {
   videoSrc?: string;

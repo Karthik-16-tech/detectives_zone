@@ -19,7 +19,9 @@ import {
 import { api } from "@/lib/api";
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { ImageUploadField } from "@/components/admin/ImageUploadField";
-import dz001Kit from "@/assets/case kits/image.png";
+import { S3_MEDIA } from "@/lib/media";
+
+const dz001Kit = S3_MEDIA.caseKits.dz001Kit;
 
 export const Route = createFileRoute("/admin/kits")({
   component: AdminKits,

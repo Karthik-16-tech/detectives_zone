@@ -18,14 +18,12 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api";
-
-import supportScene from "@/assets/support-scene.jpg";
-import hqScene from "@/assets/hq-scene.jpg";
+import { S3_MEDIA } from "@/lib/media";
 
 /* ================= IMAGES (replace with your own) ================= */
 const IMAGES = {
-  hero: supportScene,
-  support: hqScene,
+  hero: S3_MEDIA.supportScene,
+  support: S3_MEDIA.hqScene,
 };
 
 /* ================= ICONS (inline SVG, ultra-thin lines) ================= */

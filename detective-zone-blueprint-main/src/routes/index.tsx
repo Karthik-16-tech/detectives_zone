@@ -410,12 +410,13 @@ function Home() {
     const video = videoRef.current;
     if (!video) return;
 
-    // Ensure video is buffered and decoded immediately on first load
+    // Ensure video is buffered and plays continuously on page load/refresh
     video.preload = "auto";
     video.muted = true;
     video.playsInline = true;
+    video.loop = true;
 
-    // Kickstart video decoding so the frame renders instantly without refresh
+    // Autoplay the video so the detective is moving immediately on page open
     video.play().catch(() => {});
 
     // Normalized progress 0..1
@@ -425,14 +426,8 @@ function Home() {
     let didFirstMove = false;
 
     const onReady = () => {
-      const d = video.duration;
-      if (!Number.isFinite(d) || d <= 0) return;
       if (!didFirstMove) {
-        try {
-          video.currentTime = d * 0.5;
-        } catch {
-          /* noop */
-        }
+        video.play().catch(() => {});
       }
     };
 
@@ -475,6 +470,10 @@ function Home() {
         } catch {
           /* noop */
         }
+        const d = video.duration;
+        if (Number.isFinite(d) && d > 0) {
+          currentProgress = Math.max(0, Math.min(1, video.currentTime / d));
+        }
       }
       targetProgress = Math.max(0, Math.min(1, 1 - e.clientX / window.innerWidth));
       settled = false;
@@ -488,6 +487,10 @@ function Home() {
             video.pause();
           } catch {
             /* noop */
+          }
+          const d = video.duration;
+          if (Number.isFinite(d) && d > 0) {
+            currentProgress = Math.max(0, Math.min(1, video.currentTime / d));
           }
         }
         targetProgress = Math.max(0, Math.min(1, 1 - e.touches[0].clientX / window.innerWidth));

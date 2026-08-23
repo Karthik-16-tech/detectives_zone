@@ -403,69 +403,105 @@ function Home() {
     const video = videoRef.current;
     if (!video) return;
 
-    // Normalized progress 0..1 — safe even before duration is known
+    // Ensure video is buffered for instant seeking
+    video.preload = "auto";
+    video.muted = true;
+
+    // Normalized progress 0..1
     let targetProgress = 0.5;
     let currentProgress = 0.5;
-    let settled = true;       // cursor at rest → stop seeking
-    let didFirstMove = false; // pause video only once on first interaction
+    let settled = true;
+    let didFirstMove = false;
 
-    // Seed the video to mid-point once metadata arrives
     const onReady = () => {
       const d = video.duration;
       if (!Number.isFinite(d) || d <= 0) return;
-      try { video.currentTime = d * 0.5; } catch { /* noop */ }
+      try {
+        video.currentTime = d * 0.5;
+      } catch {
+        /* noop */
+      }
     };
-    if (video.readyState >= 1) onReady();
+
+    if (video.readyState >= 1) {
+      onReady();
+    }
     video.addEventListener("loadedmetadata", onReady);
 
-    // --- pointer handlers ---------------------------------------------------
+    const seekToCurrent = () => {
+      if (!video) return;
+      const d = video.duration;
+      if (!Number.isFinite(d) || d <= 0) return;
+
+      const sec = Math.max(0, Math.min(d - 0.05, currentProgress * d));
+      try {
+        if ("fastSeek" in video && typeof (video as any).fastSeek === "function") {
+          (video as any).fastSeek(sec);
+        } else {
+          video.currentTime = sec;
+        }
+      } catch {
+        /* noop */
+      }
+    };
+
+    const onSeeked = () => {
+      if (!settled) {
+        step();
+      }
+    };
+    video.addEventListener("seeked", onSeeked);
+
+    // --- pointer handlers ---
     const onMove = (e: MouseEvent | PointerEvent) => {
-      // Pause the autoplay on first cursor interaction so the frame
-      // holds perfectly still when the cursor is at rest
       if (!didFirstMove) {
         didFirstMove = true;
-        try { video.pause(); } catch { /* noop */ }
+        try {
+          video.pause();
+        } catch {
+          /* noop */
+        }
       }
       targetProgress = Math.max(0, Math.min(1, 1 - e.clientX / window.innerWidth));
       settled = false;
     };
+
     const onTouch = (e: TouchEvent) => {
       if (e.touches?.[0]) {
         if (!didFirstMove) {
           didFirstMove = true;
-          try { video.pause(); } catch { /* noop */ }
+          try {
+            video.pause();
+          } catch {
+            /* noop */
+          }
         }
         targetProgress = Math.max(0, Math.min(1, 1 - e.touches[0].clientX / window.innerWidth));
         settled = false;
       }
     };
 
-    // --- rAF loop ------------------------------------------------------------
+    // --- rAF loop with smooth lerping ---
     let raf = 0;
-    const LERP = 0.10;       // smoothing factor per frame
-    const DEAD_ZONE = 0.002; // 0.2% of duration → snap & stop
+    const LERP = 0.15;
+    const DEAD_ZONE = 0.002;
+
+    const step = () => {
+      if (settled || (video && video.seeking)) return;
+
+      const diff = targetProgress - currentProgress;
+      if (Math.abs(diff) < DEAD_ZONE) {
+        currentProgress = targetProgress;
+        settled = true;
+      } else {
+        currentProgress += diff * LERP;
+      }
+      seekToCurrent();
+    };
 
     const loop = () => {
       raf = requestAnimationFrame(loop);
-      if (settled) return; // absolutely no seeking when at rest
-
-      const d = video.duration;
-      if (!Number.isFinite(d) || d <= 0) return;
-
-      const diff = targetProgress - currentProgress;
-
-      if (Math.abs(diff) < DEAD_ZONE) {
-        // Snap to final position and freeze — no more seeking
-        currentProgress = targetProgress;
-        const sec = Math.max(0, Math.min(d - 0.01, currentProgress * d));
-        try { video.currentTime = sec; } catch { /* noop */ }
-        settled = true;
-        return;
-      }
-
-      currentProgress += diff * LERP;
-      const sec = Math.max(0, Math.min(d - 0.01, currentProgress * d));
-      try { video.currentTime = sec; } catch { /* noop */ }
+      step();
     };
 
     raf = requestAnimationFrame(loop);
@@ -478,6 +514,7 @@ function Home() {
     return () => {
       cancelAnimationFrame(raf);
       video.removeEventListener("loadedmetadata", onReady);
+      video.removeEventListener("seeked", onSeeked);
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("mousemove", onMove);
       window.removeEventListener("touchmove", onTouch);
@@ -491,6 +528,13 @@ function Home() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  // Use local pre-bundled video for zero-latency 60fps scrubbing unless an explicit custom URL is provided
+  const activeHeroVideo =
+    cmsSettings.hero_video_url &&
+    !cmsSettings.hero_video_url.includes("detective-scrub-fast.mp4")
+      ? cmsSettings.hero_video_url
+      : detectiveHeroVideo;
+
   return (
     <div>
       {/* HERO */}
@@ -502,7 +546,7 @@ function Home() {
         {/* Scrubbable Background Video (Minimal Scale, Offset Right & Lower Position) */}
         <video
           ref={videoRef}
-          src={cmsSettings.hero_video_url || detectiveHeroVideo}
+          src={activeHeroVideo}
           muted
           playsInline
           autoPlay

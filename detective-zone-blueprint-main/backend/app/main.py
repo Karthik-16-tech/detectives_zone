@@ -81,6 +81,37 @@ os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
 for sub in ["general", "cases", "evidence", "store", "kits"]:
     os.makedirs(os.path.join(settings.UPLOAD_DIR, sub), exist_ok=True)
 
+# Auto-seed / sync default superadmin on startup
+try:
+    from app.core.database import SessionLocal
+    from app.models.admin import Admin
+    from app.core.security import hash_password
+    
+    with SessionLocal() as db_session:
+        for admin_email in ["admin@detectiveszone.co", "admin@detectivezone.co"]:
+            admin_user = db_session.query(Admin).filter(
+                (Admin.email == admin_email) | (Admin.username == "admin")
+            ).first()
+            pwd_hash = hash_password("detective2026")
+            if not admin_user:
+                admin_user = Admin(
+                    email=admin_email,
+                    username="admin",
+                    full_name="Lead Detective Investigator",
+                    hashed_password=pwd_hash,
+                    role="superadmin",
+                    is_active=True
+                )
+                db_session.add(admin_user)
+            else:
+                admin_user.hashed_password = pwd_hash
+                admin_user.is_active = True
+                admin_user.role = "superadmin"
+            db_session.commit()
+            break
+except Exception as e:
+    pass
+
 app = FastAPI(
     title=settings.PROJECT_NAME,
     version=settings.VERSION,

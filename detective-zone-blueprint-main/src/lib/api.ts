@@ -4,9 +4,6 @@ const getApiBaseUrl = () => {
   if (typeof import.meta !== "undefined" && import.meta.env && import.meta.env.VITE_API_URL) {
     return import.meta.env.VITE_API_URL;
   }
-  if (typeof window !== "undefined") {
-    return "/api/v1";
-  }
   return "https://api.detectiveszone.com/api/v1";
 };
 

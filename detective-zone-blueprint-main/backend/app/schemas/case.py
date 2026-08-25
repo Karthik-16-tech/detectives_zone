@@ -181,6 +181,9 @@ class CaseBase(BaseModel):
     estimated_duration: str = "3–5 HOURS"
     rating: float = 5.0
     short_description: Optional[str] = None
+    price: Optional[float] = 999.0
+    original_price: Optional[float] = 1499.0
+    shipping_fee: Optional[float] = 0.0
     
     featured: bool = False
     is_published: bool = True
@@ -210,6 +213,9 @@ class CaseUpdate(BaseModel):
     estimated_duration: Optional[str] = None
     rating: Optional[float] = None
     short_description: Optional[str] = None
+    price: Optional[float] = None
+    original_price: Optional[float] = None
+    shipping_fee: Optional[float] = None
     
     featured: Optional[bool] = None
     is_published: Optional[bool] = None

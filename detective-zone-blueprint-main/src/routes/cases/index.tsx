@@ -25,6 +25,7 @@ import {
   Eye,
   SearchCheck,
   Zap,
+  ShoppingBag,
 } from "lucide-react";
 
 import { S3_MEDIA } from "@/lib/media";
@@ -45,26 +46,32 @@ const initialCases = [
     id: "001",
     title: "The Last Voicemail",
     number: "CASE 001",
-    status: "UNSOLVED", // UNSOLVED | COMPLETED | COMING SOON
+    status: "UNSOLVED",
     image: caseVoicemail,
     description: "A successful businessman found dead in his study. No forced entry. Just a voicemail and a lot of questions.",
     stars: 5,
     duration: "3–5 HOURS",
     difficulty: "HARD",
     rating: 5,
+    price: 1199,
+    originalPrice: 1501,
+    shippingFee: 0,
     dateAdded: 1690000000000,
   },
   {
     id: "002",
     title: "The Silent Witness",
     number: "CASE 002",
-    status: "UNSOLVED",
+    status: "COMING SOON",
     image: caseWitness,
     description: "A reclusive writer found dead in a locked room. A witness that never spoke... but saw everything.",
-    stars: 4,
+    stars: 5,
     duration: "3–6 HOURS",
     difficulty: "HARD",
-    rating: 4,
+    rating: 4.9,
+    price: 1450,
+    originalPrice: 1899,
+    shippingFee: 0,
     dateAdded: 1691000000000,
   },
   {
@@ -74,10 +81,13 @@ const initialCases = [
     status: "COMING SOON",
     image: caseLetter,
     description: "A threatening letter. A missing girl. A trail of blood. The shadows are speaking.",
-    stars: 0,
-    duration: "COMING SOON",
+    stars: 5,
+    duration: "4–5 HOURS",
     difficulty: "MEDIUM",
-    rating: 0,
+    rating: 4.8,
+    price: 1199,
+    originalPrice: 1399,
+    shippingFee: 0,
     dateAdded: 1692000000000,
   },
   {
@@ -87,10 +97,13 @@ const initialCases = [
     status: "COMING SOON",
     image: caseHeir,
     description: "They were here one day, gone the next. A disappearance that made no noise at all.",
-    stars: 0,
-    duration: "COMING SOON",
-    difficulty: "MEDIUM",
-    rating: 0,
+    stars: 5,
+    duration: "5–6 HOURS",
+    difficulty: "HARD",
+    rating: 4.9,
+    price: 999,
+    originalPrice: 1499,
+    shippingFee: 0,
     dateAdded: 1693000000000,
   },
   {
@@ -100,10 +113,13 @@ const initialCases = [
     status: "COMING SOON",
     image: caseExperiment,
     description: "A scientist's last experiment was never meant to be found. Now the cure is the disease.",
-    stars: 0,
-    duration: "COMING SOON",
-    difficulty: "HARD",
-    rating: 0,
+    stars: 5,
+    duration: "4–6 HOURS",
+    difficulty: "EXPERT",
+    rating: 5,
+    price: 1299,
+    originalPrice: 1499,
+    shippingFee: 0,
     dateAdded: 1694000000000,
   },
   {
@@ -113,10 +129,13 @@ const initialCases = [
     status: "COMING SOON",
     image: caseBetrayal,
     description: "A man caught between loyalty and truth. One choice changed everything.",
-    stars: 0,
-    duration: "COMING SOON",
-    difficulty: "HARD",
-    rating: 0,
+    stars: 5,
+    duration: "6–8 HOURS",
+    difficulty: "EXPERT",
+    rating: 4.9,
+    price: 1499,
+    originalPrice: 1499,
+    shippingFee: 0,
     dateAdded: 1695000000000,
   },
 ];
@@ -125,49 +144,77 @@ import { api } from "@/lib/api";
 import { useEffect } from "react";
 
 function CasesDashboard() {
-  const [activeTab, setActiveTab] = useState<"ALL" | "UNSOLVED" | "COMPLETED" | "COMING SOON">("ALL");
+  const [activeTab, setActiveTab] = useState<"ALL" | "UNSOLVED" | "COMING SOON">("ALL");
   const [liveCases, setLiveCases] = useState<any[]>(initialCases);
+  const [siteSettings, setSiteSettings] = useState<Record<string, string>>({});
   const swiperRef = useRef<SwiperRef | null>(null);
   const prevBtn = useRef<HTMLButtonElement | null>(null);
   const nextBtn = useRef<HTMLButtonElement | null>(null);
 
   // Live fetch from FastAPI backend
   useEffect(() => {
-    api.getCases()
-      .then((data: any[]) => {
-        if (data && Array.isArray(data) && data.length > 0) {
-          const imageMap: Record<string, string> = {
-            "001": caseVoicemail,
-            "002": caseWitness,
-            "003": caseLetter,
-            "004": caseHeir,
-            "005": caseExperiment,
-            "006": caseBetrayal,
+    Promise.all([
+      api.getCases().catch(() => []),
+      api.getProducts().catch(() => []),
+      api.getSettings().catch(() => ({})),
+    ]).then(([casesData, prodsData, settingsData]: [any[], any[], any]) => {
+      if (settingsData && typeof settingsData === "object") {
+        setSiteSettings(settingsData);
+      }
+      const prodMap = new Map<string, any>();
+      if (prodsData && Array.isArray(prodsData) && prodsData.length > 0) {
+        prodsData.forEach((p: any, idx: number) => {
+          const skuNum = p.sku ? p.sku.replace("DZ-KIT-", "").replace("CASE", "").replace("#", "").trim().padStart(3, "0") : `00${idx + 1}`;
+          if (skuNum) prodMap.set(skuNum, p);
+          if (p.slug) prodMap.set(p.slug.toLowerCase().trim(), p);
+          const cleanTitle = p.name ? p.name.split(" — ")[0].split(" - ")[0].toLowerCase().trim() : "";
+          if (cleanTitle) prodMap.set(cleanTitle, p);
+        });
+      }
+
+      if (casesData && Array.isArray(casesData) && casesData.length > 0) {
+        const imageMap: Record<string, string> = {
+          "001": caseVoicemail,
+          "002": caseWitness,
+          "003": caseLetter,
+          "004": caseHeir,
+          "005": caseExperiment,
+          "006": caseBetrayal,
+        };
+        const mapped = casesData.map((c: any, idx: number) => {
+          const num = c.case_number ? c.case_number.replace(/^CASE\s*#?/i, "").trim().padStart(3, "0") : `00${idx + 1}`;
+          const img = (c.cover_image && !c.cover_image.startsWith("/src")) 
+            ? c.cover_image 
+            : (imageMap[num] || imageMap[c.slug] || caseVoicemail);
+
+          const matchedProd = prodMap.get(num) || prodMap.get(c.slug?.toLowerCase().trim()) || prodMap.get(c.title?.toLowerCase().trim());
+          const prodRate = matchedProd ? (matchedProd.sale_price ? Number(matchedProd.sale_price) : (matchedProd.price != null ? Number(matchedProd.price) : null)) : null;
+
+          const finalPrice = c.price != null ? Number(c.price) : (prodRate != null ? prodRate : 999);
+          const finalOrigPrice = c.original_price != null ? Number(c.original_price) : 1499;
+          const finalShipFee = c.shipping_fee != null ? Number(c.shipping_fee) : 0;
+
+          return {
+            id: num,
+            dbId: c.id,
+            title: c.title,
+            number: c.case_number.startsWith("CASE") ? c.case_number : `CASE ${c.case_number}`,
+            status: c.status || "UNSOLVED",
+            image: img,
+            description: c.short_description || c.intro_text || "",
+            stars: c.rating ? Math.round(c.rating) : 5,
+            duration: c.estimated_duration || "3–5 HOURS",
+            difficulty: c.difficulty || "HARD",
+            rating: c.rating || 5,
+            price: finalPrice,
+            originalPrice: finalOrigPrice,
+            shippingFee: finalShipFee,
+            dateAdded: new Date(c.created_at || Date.now()).getTime(),
           };
-          const mapped = data.map((c: any) => {
-            const num = c.case_number ? c.case_number.replace(/^CASE\s*/i, "") : "001";
-            const img = (c.cover_image && !c.cover_image.startsWith("/src")) 
-              ? c.cover_image 
-              : (imageMap[num] || imageMap[c.slug] || caseVoicemail);
-            return {
-              id: num,
-              dbId: c.id,
-              title: c.title,
-              number: c.case_number.startsWith("CASE") ? c.case_number : `CASE ${c.case_number}`,
-              status: c.status || "UNSOLVED",
-              image: img,
-              description: c.short_description || c.intro_text || "",
-              stars: c.rating ? Math.round(c.rating) : 5,
-              duration: c.estimated_duration || "3–5 HOURS",
-              difficulty: c.difficulty || "HARD",
-              rating: c.rating || 5,
-              dateAdded: new Date(c.created_at || Date.now()).getTime(),
-            };
-          });
-          setLiveCases(mapped);
-        }
-      })
-      .catch((err) => console.log("Using initial cases fallback:", err));
+        });
+        setLiveCases(mapped);
+      }
+    }).catch((err) => console.log("Using initial cases fallback:", err));
   }, []);
 
   const filteredCases = useMemo(() => {
@@ -203,7 +250,7 @@ function CasesDashboard() {
         {/* FILTER BAR */}
         <section className="flex items-center w-fit bg-[#0B0B0B] border border-[#1A1A1A] rounded-lg px-6 py-3 mb-8">
           <div className="flex flex-wrap items-center gap-8">
-            {(["ALL", "UNSOLVED", "COMPLETED", "COMING SOON"] as const).map((tab) => (
+            {(["ALL", "UNSOLVED", "COMING SOON"] as const).map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
@@ -276,34 +323,90 @@ function CasesDashboard() {
                           className={`absolute top-4 left-4 inline-flex items-center gap-1.5 font-mono text-[8px] font-bold tracking-[0.2em] uppercase px-2.5 py-1 rounded-[3px] border shadow-md backdrop-blur-md transition-all duration-300 ${
                             c.status === "UNSOLVED"
                               ? "bg-black/90 text-[#FF4A50] border-[#C81D24]/60 shadow-[0_0_12px_rgba(200,29,36,0.35)]"
+                              : c.status === "COMPLETED" || c.status === "SOLVED"
+                              ? "bg-black/90 text-emerald-400 border-emerald-500/50 shadow-[0_0_10px_rgba(16,185,129,0.3)]"
                               : "bg-black/85 text-neutral-400 border-white/10 shadow-[0_0_8px_rgba(0,0,0,0.6)]"
                           }`}
                         >
                           <span
                             className={`inline-block w-1.5 h-1.5 rounded-full ${
-                              c.status === "UNSOLVED" ? "bg-[#C81D24] animate-pulse" : "bg-neutral-600"
+                              c.status === "UNSOLVED" 
+                                ? "bg-[#C81D24] animate-pulse" 
+                                : c.status === "COMPLETED" || c.status === "SOLVED"
+                                ? "bg-emerald-400"
+                                : "bg-neutral-600"
                             }`}
                           />
-                          {c.status === "UNSOLVED" ? "UNSOLVED" : "COMING SOON"}
+                          {c.status || "UNSOLVED"}
                         </span>
                       </div>
 
                       {/* Content Area */}
-                      <div className="p-6 flex-1 flex flex-col justify-between">
+                      <div className="p-5 sm:p-6 flex-1 flex flex-col justify-between">
                         <div>
                           <p className="font-mono text-[10px] tracking-[0.16em] text-[#9A9A9A] uppercase mb-1">
                             {c.number}
                           </p>
                           <h3
-                            className="font-display text-[26px] text-white tracking-[0.5px] leading-tight uppercase group-hover:text-[#B31217] transition-colors duration-300 mb-3"
+                            className="font-display text-[24px] sm:text-[26px] text-white tracking-[0.5px] leading-tight uppercase group-hover:text-[#B31217] transition-colors duration-300 mb-1"
                             style={{ fontFamily: "Bebas Neue, sans-serif" }}
                           >
                             {c.title}
                           </h3>
+                          {c.description && (
+                            <p className="font-sans text-[11.5px] text-white/50 line-clamp-2 leading-relaxed mb-2">
+                              {c.description}
+                            </p>
+                          )}
                         </div>
 
+                        {/* Price & Buy Now Action Row */}
+                        {(() => {
+                          const currentPrice = c.price != null ? Number(c.price) : 999;
+                          const origPrice = c.originalPrice != null ? Number(c.originalPrice) : (c.original_price != null ? Number(c.original_price) : 1499);
+                          const shipFee = c.shippingFee != null ? Number(c.shippingFee) : (c.shipping_fee != null ? Number(c.shipping_fee) : 0);
+                          const discountPct = origPrice > currentPrice ? Math.round(((origPrice - currentPrice) / origPrice) * 100) : 0;
+                          const isPurchasable = c.status !== "COMING SOON";
+
+                          return (
+                            <div className="mt-2 flex items-center justify-between border-t border-[#1A1A1A] pt-3">
+                              <div className="flex flex-col">
+                                <div className="flex items-baseline gap-1.5">
+                                  <span className="font-mono text-[15px] font-bold text-white tracking-wider">
+                                    ₹{currentPrice}
+                                  </span>
+                                  {origPrice > currentPrice && (
+                                    <span className="font-mono text-[10px] text-white/35 line-through">
+                                      ₹{origPrice}
+                                    </span>
+                                  )}
+                                  {discountPct > 0 && (
+                                    <span className="font-mono text-[8px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-1 py-0.2 rounded">
+                                      {discountPct}% OFF
+                                    </span>
+                                  )}
+                                </div>
+                                <span className="font-mono text-[8px] text-white/40 uppercase tracking-wider mt-0.5">
+                                  {shipFee === 0 ? "Free Delivery" : `+₹${shipFee} Shipping`}
+                                </span>
+                              </div>
+
+                              {isPurchasable ? (
+                                <span className="inline-flex items-center gap-1.5 rounded-[5px] bg-[#D32F2F] group-hover:bg-[#B71C1C] text-white px-3 py-1 font-mono text-[9px] font-bold uppercase tracking-[0.16em] shadow-[0_0_12px_rgba(211,47,47,0.35)] transition-all duration-300">
+                                  <ShoppingBag className="w-2.5 h-2.5" />
+                                  Buy Now
+                                </span>
+                              ) : (
+                                <span className="font-mono text-[8.5px] font-bold uppercase tracking-wider text-white/40">
+                                  Coming Soon
+                                </span>
+                              )}
+                            </div>
+                          );
+                        })()}
+
                         {/* Metadata Row */}
-                        <div className="border-t border-[#1A1A1A] pt-4 mt-5 flex items-center justify-between text-[11px] font-mono tracking-wider">
+                        <div className="border-t border-[#1A1A1A]/60 pt-3 mt-2 flex items-center justify-between text-[11px] font-mono tracking-wider">
                           <div className="flex gap-0.5">
                             {Array.from({ length: 5 }).map((_, i) => (
                               <Star
@@ -409,35 +512,35 @@ function CasesDashboard() {
           </main>
 
         {/* HOW IT WORKS + CASE STATISTICS */}
-        <section className="mt-32 grid grid-cols-1 lg:grid-cols-2 gap-10 items-start">
+        <section className="mt-16 sm:mt-24 lg:mt-32 grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-14 items-start">
           <div className="lg:col-span-1">
-            <div className="flex items-center gap-3 mb-10">
+            <div className="flex items-center gap-3 mb-8 sm:mb-10">
               <span className="h-4 w-1 bg-[#B31217]" />
               <h3 className="font-display text-[15px] font-bold text-white tracking-[1.5px] uppercase" style={{ fontFamily: "Bebas Neue, sans-serif" }}>
                 How it works
               </h3>
             </div>
 
-            <div className="flex flex-col gap-12">
+            <div className="flex flex-col gap-8 sm:gap-12">
               {[
                 { step: "01", title: "Purchase a Case", desc: "Choose a case and get your evidence box delivered." },
                 { step: "02", title: "Examine Evidence", desc: "Analyze documents, photos, audio and other clues." },
                 { step: "03", title: "Connect the Dots", desc: "Use logic and deduction to uncover the truth." },
                 { step: "04", title: "Submit Your Report", desc: "Submit your conclusions and unlock the truth." },
               ].map((s) => (
-                <div key={s.step} className="flex flex-col gap-2">
+                <div key={s.step} className="flex flex-col gap-1.5 sm:gap-2">
                   <SkiperTextRevealH
-                    className="font-mono text-[13px] tracking-[0.3em] text-[#B31217] uppercase"
+                    className="font-mono text-[12px] sm:text-[13px] tracking-[0.3em] text-[#B31217] uppercase"
                   >
                     Step {s.step}
                   </SkiperTextRevealH>
                   <SkiperTextRevealH
-                    className="font-display text-[clamp(2rem,5.5vw,4rem)] font-bold uppercase leading-[1.05] tracking-wide text-white"
+                    className="font-display text-[clamp(1.75rem,6.5vw,3.5rem)] font-bold uppercase leading-[1.05] tracking-wide text-white"
                     style={{ fontFamily: "Bebas Neue, sans-serif" }}
                   >
                     {s.title}
                   </SkiperTextRevealH>
-                  <SkiperTextRevealH className="text-[14px] text-[#888] leading-relaxed max-w-2xl">
+                  <SkiperTextRevealH className="text-[13px] sm:text-[14px] text-[#888] leading-relaxed max-w-2xl">
                     {s.desc}
                   </SkiperTextRevealH>
                 </div>
@@ -446,42 +549,58 @@ function CasesDashboard() {
           </div>
 
           {/* Case Statistics */}
-          <aside className="lg:sticky lg:top-[96px]">
-            <section className="bg-[#0B0B0B] border border-[#1A1A1A] rounded-lg p-9 relative overflow-hidden" style={{ boxShadow: "inset 0 1px 1px rgba(255, 255, 255, 0.02)" }}>
-              <div className="flex items-center gap-3 mb-8">
+          <aside className="lg:sticky lg:top-[96px] mt-4 lg:mt-0">
+            <section className="bg-[#0B0B0B] border border-[#1A1A1A] rounded-xl p-5 sm:p-9 relative overflow-hidden" style={{ boxShadow: "inset 0 1px 1px rgba(255, 255, 255, 0.02)" }}>
+              <div className="flex items-center gap-3 mb-6 sm:mb-8">
                 <span className="h-5 w-1 bg-[#B31217]" />
-                <h3 className="font-display text-[18px] font-bold text-white tracking-[1.5px] uppercase" style={{ fontFamily: "Bebas Neue, sans-serif" }}>
+                <h3 className="font-display text-[16px] sm:text-[18px] font-bold text-white tracking-[1.5px] uppercase" style={{ fontFamily: "Bebas Neue, sans-serif" }}>
                   Case Statistics
                 </h3>
               </div>
-              <div className="grid grid-cols-2 gap-5">
-                <div className="p-8 bg-neutral-950/60 border border-white/5 rounded flex flex-col items-center text-center">
-                  <div className="h-12 w-12 rounded-full border border-white/5 bg-[#0B0B0B] flex items-center justify-center mb-4">
-                    <FolderOpen className="h-6 w-6 text-muted-foreground" />
+              <div className="grid grid-cols-2 gap-3 sm:gap-5">
+                <div className="p-4 sm:p-8 bg-neutral-950/60 border border-white/5 rounded-lg flex flex-col items-center text-center">
+                  <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-full border border-white/5 bg-[#0B0B0B] flex items-center justify-center mb-3 sm:mb-4">
+                    <FolderOpen className="h-5 w-5 sm:h-6 sm:w-6 text-muted-foreground" />
                   </div>
-                  <span className="font-display text-[48px] font-bold text-white leading-none" style={{ fontFamily: "Bebas Neue, sans-serif" }}>06</span>
-                  <span className="text-[11px] text-[#A0A0A0] tracking-widest uppercase mt-3">Total Cases</span>
+                  <span className="font-display text-[36px] sm:text-[48px] font-bold text-white leading-none" style={{ fontFamily: "Bebas Neue, sans-serif" }}>
+                    {siteSettings.stats_total_cases || String(liveCases.length).padStart(2, "0")}
+                  </span>
+                  <span className="text-[10px] sm:text-[11px] text-[#A0A0A0] tracking-widest uppercase mt-2 sm:mt-3">
+                    {siteSettings.stats_total_cases_label || "Total Cases"}
+                  </span>
                 </div>
-                <div className="p-8 bg-neutral-950/60 border border-white/5 rounded flex flex-col items-center text-center">
-                  <div className="h-12 w-12 rounded-full border border-white/5 bg-[#0B0B0B] flex items-center justify-center mb-4">
-                    <Eye className="h-6 w-6 text-[#B31217]" />
+                <div className="p-4 sm:p-8 bg-neutral-950/60 border border-white/5 rounded-lg flex flex-col items-center text-center">
+                  <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-full border border-white/5 bg-[#0B0B0B] flex items-center justify-center mb-3 sm:mb-4">
+                    <Eye className="h-5 w-5 sm:h-6 sm:w-6 text-[#B31217]" />
                   </div>
-                  <span className="font-display text-[48px] font-bold text-white leading-none" style={{ fontFamily: "Bebas Neue, sans-serif" }}>03</span>
-                  <span className="text-[11px] text-[#A0A0A0] tracking-widest uppercase mt-3">Unsolved</span>
+                  <span className="font-display text-[36px] sm:text-[48px] font-bold text-white leading-none" style={{ fontFamily: "Bebas Neue, sans-serif" }}>
+                    {siteSettings.stats_unsolved_cases || String(liveCases.filter((c) => c.status === "UNSOLVED").length).padStart(2, "0")}
+                  </span>
+                  <span className="text-[10px] sm:text-[11px] text-[#A0A0A0] tracking-widest uppercase mt-2 sm:mt-3">
+                    {siteSettings.stats_unsolved_cases_label || "Unsolved"}
+                  </span>
                 </div>
-                <div className="p-8 bg-neutral-950/60 border border-white/5 rounded flex flex-col items-center text-center">
-                  <div className="h-12 w-12 rounded-full border border-white/5 bg-[#0B0B0B] flex items-center justify-center mb-4">
-                    <SearchCheck className="h-6 w-6 text-muted-foreground" />
+                <div className="p-4 sm:p-8 bg-neutral-950/60 border border-white/5 rounded-lg flex flex-col items-center text-center">
+                  <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-full border border-white/5 bg-[#0B0B0B] flex items-center justify-center mb-3 sm:mb-4">
+                    <SearchCheck className="h-5 w-5 sm:h-6 sm:w-6 text-muted-foreground" />
                   </div>
-                  <span className="font-display text-[48px] font-bold text-white leading-none" style={{ fontFamily: "Bebas Neue, sans-serif" }}>00</span>
-                  <span className="text-[11px] text-[#A0A0A0] tracking-widest uppercase mt-3">Completed</span>
+                  <span className="font-display text-[36px] sm:text-[48px] font-bold text-white leading-none" style={{ fontFamily: "Bebas Neue, sans-serif" }}>
+                    {siteSettings.stats_completed_cases || String(liveCases.filter((c) => c.status === "COMPLETED" || c.status === "SOLVED").length).padStart(2, "0")}
+                  </span>
+                  <span className="text-[10px] sm:text-[11px] text-[#A0A0A0] tracking-widest uppercase mt-2 sm:mt-3">
+                    {siteSettings.stats_completed_cases_label || "Completed"}
+                  </span>
                 </div>
-                <div className="p-8 bg-neutral-950/60 border border-white/5 rounded flex flex-col items-center text-center">
-                  <div className="h-12 w-12 rounded-full border border-white/5 bg-[#0B0B0B] flex items-center justify-center mb-4">
-                    <Zap className="h-6 w-6 text-muted-foreground" />
+                <div className="p-4 sm:p-8 bg-neutral-950/60 border border-white/5 rounded-lg flex flex-col items-center text-center">
+                  <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-full border border-white/5 bg-[#0B0B0B] flex items-center justify-center mb-3 sm:mb-4">
+                    <Zap className="h-5 w-5 sm:h-6 sm:w-6 text-muted-foreground" />
                   </div>
-                  <span className="font-display text-[48px] font-bold text-white leading-none" style={{ fontFamily: "Bebas Neue, sans-serif" }}>10K+</span>
-                  <span className="text-[11px] text-[#A0A0A0] tracking-widest uppercase mt-3">Detectives</span>
+                  <span className="font-display text-[36px] sm:text-[48px] font-bold text-white leading-none" style={{ fontFamily: "Bebas Neue, sans-serif" }}>
+                    {siteSettings.stats_detectives_count || "10K+"}
+                  </span>
+                  <span className="text-[10px] sm:text-[11px] text-[#A0A0A0] tracking-widest uppercase mt-2 sm:mt-3">
+                    {siteSettings.stats_detectives_label || "Detectives"}
+                  </span>
                 </div>
               </div>
             </section>

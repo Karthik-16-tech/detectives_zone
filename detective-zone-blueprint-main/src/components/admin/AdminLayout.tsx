@@ -68,7 +68,6 @@ export function AdminLayout({ children, title, subtitle, action }: AdminLayoutPr
     { label: "Store Products", to: "/admin/store", icon: ShoppingBag },
     { label: "Case Kits", to: "/admin/kits", icon: Package },
     { label: "Orders & Desk", to: "/admin/orders", icon: ShoppingCart },
-    { label: "Payment Gateway", to: "/admin/payments", icon: CreditCard },
     { label: "WhatsApp Panel", to: "/admin/whatsapp", icon: MessageCircle },
     { label: "Contact Inbox", to: "/admin/contact", icon: Mail },
     { label: "Global Settings", to: "/admin/settings", icon: Settings },

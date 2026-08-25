@@ -6,6 +6,7 @@ from app.core.database import get_db
 from app.core.deps import get_current_admin
 from app.models.admin import Admin
 from app.models.product import Product, ProductImage
+from app.models.case import Case
 from app.schemas.product import ProductCreate, ProductUpdate, ProductOut, ProductImageCreate, ProductImageOut
 from app.services.audit import log_admin_action
 
@@ -86,8 +87,41 @@ def update_product(
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
     
-    for key, val in req.dict(exclude_unset=True).items():
+    update_data = req.dict(exclude_unset=True)
+    for key, val in update_data.items():
         setattr(product, key, val)
+    
+    # Synchronize matching case if price or details updated
+    try:
+        clean_num = ""
+        if product.sku:
+            clean_num = product.sku.replace("DZ-KIT-", "").replace("CASE", "").replace("#", "").strip()
+        elif product.slug and product.slug.startswith("p") and product.slug[1:].isdigit():
+            clean_num = str(int(product.slug[1:]))
+
+        raw_name = product.name or ""
+        clean_title = raw_name.split(" — ")[0].split(" - ")[0].strip()
+
+        matching_cases = db.query(Case).filter(
+            (Case.case_number == clean_num if clean_num else False) |
+            (Case.case_number == clean_num.zfill(3) if clean_num else False) |
+            (Case.case_number == f"CASE {clean_num}" if clean_num else False) |
+            (Case.case_number == f"CASE {clean_num.zfill(3)}" if clean_num else False) |
+            (Case.slug == product.slug if product.slug else False) |
+            (Case.title.ilike(f"%{clean_title}%") if clean_title else False)
+        ).all()
+
+        target_price = product.sale_price if product.sale_price is not None else product.price
+        for c in matching_cases:
+            if ("price" in update_data or "sale_price" in update_data) and target_price is not None:
+                c.price = float(target_price)
+            if "short_description" in update_data and product.short_description:
+                c.short_description = product.short_description
+            if "name" in update_data and clean_title:
+                c.title = clean_title
+    except Exception as e:
+        print(f"Case sync notice: {e}")
+
     db.commit()
     db.refresh(product)
     

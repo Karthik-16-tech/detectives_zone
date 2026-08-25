@@ -6,6 +6,7 @@ from app.core.database import get_db
 from app.core.deps import get_current_admin
 from app.models.admin import Admin
 from app.models.case import Case, CaseSection, Evidence, CaseVideo, CaseGalleryImage, CaseNote, Clue, CasePageContent
+from app.models.product import Product
 from app.schemas.case import (
     CaseCreate, CaseUpdate, CaseOut, CaseDetailOut,
     CaseSectionCreate, CaseSectionUpdate, CaseSectionOut,
@@ -129,6 +130,32 @@ def update_case(
     for key, value in update_data.items():
         setattr(case, key, value)
     
+    # Synchronize matching store product if price or details updated
+    try:
+        clean_num = case.case_number.replace("CASE", "").replace("#", "").strip()
+        num_int = int(clean_num) if clean_num.isdigit() else 0
+        matching_products = db.query(Product).filter(
+            (Product.slug == f"p{num_int}" if num_int > 0 else False) |
+            (Product.sku.ilike(f"%{clean_num}%")) |
+            (Product.sku.ilike(f"%{clean_num.zfill(3)}%")) |
+            (Product.name.ilike(f"%{case.title}%"))
+        ).all()
+        for prod in matching_products:
+            if "price" in update_data and case.price is not None:
+                prod.price = float(case.price)
+                prod.sale_price = None
+            if "title" in update_data and case.title:
+                suffix = "Investigation Dossier"
+                if " - " in prod.name:
+                    suffix = prod.name.split(" - ")[1]
+                elif " — " in prod.name:
+                    suffix = prod.name.split(" — ")[1]
+                prod.name = f"{case.title} - {suffix}"
+            if "short_description" in update_data and case.short_description:
+                prod.short_description = case.short_description
+    except Exception as e:
+        print(f"Product sync notice: {e}")
+
     db.commit()
     db.refresh(case)
     

@@ -62,6 +62,7 @@ interface Product {
   title: string;
   description: string;
   price: number;
+  shippingFee?: number;
   image: string;
   badge: string;
   stars: number;
@@ -291,11 +292,22 @@ function StorePage() {
   useEffect(() => {
     Promise.all([
       api.getProducts().catch(() => []),
+      api.getCases().catch(() => []),
       api.getSettings().catch(() => ({})),
       api.getSignatures().catch(() => []),
-    ]).then(([prods, sets, sigs]: [any[], any, any[]]) => {
+    ]).then(([prods, cases, sets, sigs]: [any[], any[], any, any[]]) => {
       if (sigs && Array.isArray(sigs) && sigs.length > 0) {
         setLiveSignatures(sigs);
+      }
+
+      const caseMap: Record<string, any> = {};
+      if (cases && Array.isArray(cases) && cases.length > 0) {
+        cases.forEach((c: any) => {
+          const num = c.case_number ? c.case_number.replace(/^CASE\s*#?/i, "").trim().padStart(3, "0") : "";
+          if (num) caseMap[num] = c;
+          if (c.slug) caseMap[c.slug.toLowerCase().trim()] = c;
+          if (c.title) caseMap[c.title.toLowerCase().trim()] = c;
+        });
       }
 
       if (prods && Array.isArray(prods) && prods.length > 0) {
@@ -307,31 +319,89 @@ function StorePage() {
           p5: caseHeir,
           p6: caseExperiment,
         };
-        const mapped = prods.map((p: any, idx: number) => ({
-          id: p.slug || `p${idx + 1}`,
-          caseNumber: p.sku ? p.sku.replace("DZ-KIT-", "CASE ") : `CASE 00${idx + 1}`,
-          title: p.name ? p.name.split(" — ")[0] : p.name,
-          description: p.short_description || "",
-          price: p.price || 999,
-          image: (p.cover_image && !p.cover_image.startsWith("/src")) ? p.cover_image : (imageMap[p.slug] || imageMap[`p${idx + 1}`] || caseVoicemail),
-          badge: idx === 0 ? "BESTSELLER" : idx === 1 ? "BESTSELLER" : idx === 2 ? "NEW" : idx === 3 ? "COLLECTOR" : idx === 4 ? "CLASSIFIED" : "TOP SECRET",
-          stars: 5,
-          reviews: 80 + idx * 10,
-          difficulty: "Hard",
-          duration: "3–5 hrs",
-          type: "hybrid" as const,
-          stock: p.stock_quantity ?? 10,
-        }));
+        const mapped = prods.map((p: any, idx: number) => {
+          const cleanSkuNum = p.sku ? p.sku.replace("DZ-KIT-", "").replace("CASE", "").trim().padStart(3, "0") : `00${idx + 1}`;
+          const cleanTitle = (p.name ? p.name.split(" — ")[0].split(" - ")[0] : "").toLowerCase().trim();
+          const matchedCase = caseMap[cleanSkuNum] || caseMap[p.slug?.toLowerCase().trim()] || caseMap[cleanTitle];
+
+          let finalPrice = 999;
+          if (p.sale_price != null && p.sale_price !== "" && !isNaN(Number(p.sale_price))) {
+            finalPrice = Number(p.sale_price);
+          } else if (matchedCase?.price != null && Number(matchedCase.price) !== 999) {
+            finalPrice = Number(matchedCase.price);
+          } else if (p.price != null && Number(p.price) !== 999) {
+            finalPrice = Number(p.price);
+          } else if (matchedCase?.price != null) {
+            finalPrice = Number(matchedCase.price);
+          } else if (p.price != null) {
+            finalPrice = Number(p.price);
+          }
+
+          const rawTitle = p.name ? p.name.split(" — ")[0].split(" - ")[0] : (matchedCase?.title || p.name);
+
+          return {
+            id: p.slug || `p${idx + 1}`,
+            caseNumber: p.sku ? p.sku.replace("DZ-KIT-", "CASE ") : `CASE 00${idx + 1}`,
+            title: rawTitle,
+            description: p.short_description || matchedCase?.short_description || "",
+            price: finalPrice,
+            shippingFee: matchedCase?.shipping_fee != null ? Number(matchedCase.shipping_fee) : (p.shipping_fee != null ? Number(p.shipping_fee) : 0),
+            image: (p.cover_image && !p.cover_image.startsWith("/src")) 
+              ? p.cover_image 
+              : (matchedCase?.cover_image && !matchedCase.cover_image.startsWith("/src")
+                ? matchedCase.cover_image
+                : (imageMap[p.slug] || imageMap[`p${idx + 1}`] || caseVoicemail)),
+            badge: idx === 0 ? "BESTSELLER" : idx === 1 ? "BESTSELLER" : idx === 2 ? "NEW" : idx === 3 ? "COLLECTOR" : idx === 4 ? "CLASSIFIED" : "TOP SECRET",
+            stars: matchedCase?.rating ? Math.round(Number(matchedCase.rating)) : 5,
+            reviews: 80 + idx * 10,
+            difficulty: matchedCase?.difficulty || "Hard",
+            duration: matchedCase?.estimated_duration || "3–5 hrs",
+            type: "hybrid" as const,
+            stock: p.stock_quantity ?? 10,
+          };
+        });
+        setLiveProducts(mapped);
+      } else if (cases && Array.isArray(cases) && cases.length > 0) {
+        const imageMap: Record<string, string> = {
+          "001": caseVoicemail,
+          "002": caseWitness,
+          "003": caseLetter,
+          "004": caseHeir,
+          "005": caseExperiment,
+          "006": caseBetrayal,
+        };
+        const mapped = cases.map((c: any, idx: number) => {
+          const num = c.case_number ? c.case_number.replace(/^CASE\s*/i, "") : `00${idx + 1}`;
+          const img = (c.cover_image && !c.cover_image.startsWith("/src")) 
+            ? c.cover_image 
+            : (imageMap[num] || imageMap[c.slug] || caseVoicemail);
+          return {
+            id: `p${idx + 1}`,
+            caseNumber: c.case_number?.startsWith("CASE") ? c.case_number : `CASE ${c.case_number}`,
+            title: c.title,
+            description: c.short_description || c.intro_text || "",
+            price: c.price != null ? Number(c.price) : 999,
+            image: img,
+            badge: idx === 0 ? "BESTSELLER" : idx === 1 ? "BESTSELLER" : idx === 2 ? "NEW" : idx === 3 ? "COLLECTOR" : idx === 4 ? "CLASSIFIED" : "TOP SECRET",
+            stars: c.rating ? Math.round(Number(c.rating)) : 5,
+            reviews: 80 + idx * 10,
+            difficulty: c.difficulty || "Hard",
+            duration: c.estimated_duration || "3–5 hrs",
+            type: "hybrid" as const,
+            stock: 10,
+          };
+        });
         setLiveProducts(mapped);
       }
 
       if (sets && Object.keys(sets).length > 0) {
+        const featPrice = sets.featured_kit_price ? parseFloat(sets.featured_kit_price) : (caseMap["001"]?.price ? Number(caseMap["001"].price) : 999);
         setFeaturedSettings({
           code: sets.featured_kit_code || "DZ-001",
           title: sets.featured_kit_title || "The Last Voicemail",
           hover_title: sets.featured_kit_hover_title || "The Case Is Open.",
           quote: sets.featured_kit_quote || '"A sealed case. A missing voice. Thirty pieces of evidence standing between you and the truth."',
-          price: parseFloat(sets.featured_kit_price) || 999,
+          price: featPrice,
           duration: sets.featured_kit_duration || "3–4",
           level: sets.featured_kit_level || "Expert",
           image: sets.featured_kit_image && !sets.featured_kit_image.startsWith("/src") ? sets.featured_kit_image : dz001Kit,
@@ -375,6 +445,7 @@ function StorePage() {
       title: p.title,
       caseNumber: p.caseNumber,
       price: p.price,
+      shippingFee: p.shippingFee ?? 0,
       image: p.image,
       type: p.type === "physical" ? "Physical Case Box" : "Hybrid Evidence Package",
     });
@@ -427,6 +498,8 @@ function StorePage() {
     box: k.box,
     cases: k.cases,
   }));
+
+  const displayProducts = liveProducts.length > 0 ? liveProducts : products;
 
   return (
     <div
@@ -551,9 +624,12 @@ function StorePage() {
                   YOUR INVESTIGATION.
                 </span>
               </h1>
-              <div className="mt-7 flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:gap-4">
+              <div className="mt-7 flex items-center">
                 <button
-                  className="group relative flex items-center justify-center gap-2 rounded-lg border px-7 py-3.5 font-display text-[12px] tracking-[0.2em] uppercase transition-all duration-500"
+                  onClick={() => {
+                    document.getElementById("evidence-locker")?.scrollIntoView({ behavior: "smooth" });
+                  }}
+                  className="group relative flex items-center justify-center gap-2 rounded-lg border px-7 py-3.5 font-display text-[12px] tracking-[0.2em] uppercase transition-all duration-500 cursor-pointer"
                   style={{
                     background: "linear-gradient(135deg, #7A0F13 0%, #A11418 100%)",
                     borderColor: "rgba(200,29,36,0.4)",
@@ -564,24 +640,12 @@ function StorePage() {
                   Explore Cases
                   <ArrowRight className="h-3.5 w-3.5 transition-transform duration-300 group-hover:translate-x-1" />
                 </button>
-                <button
-                  className="group flex items-center justify-center gap-2 rounded-lg border px-6 py-3.5 font-mono text-[11px] tracking-[0.15em] uppercase transition-all duration-500"
-                  style={{
-                    background: "rgba(255,255,255,0.04)",
-                    borderColor: "rgba(255,255,255,0.1)",
-                    color: "#A8A8A8",
-                    backdropFilter: "blur(10px)",
-                  }}
-                >
-                  <Play className="h-3 w-3" style={{ color: "#C81D24" }} />
-                  Watch Preview
-                </button>
               </div>
             </div>
           </section>
 
           {/* ──── STORE TABS ──── */}
-          <section className="mt-12">
+          <section className="mt-12 scroll-mt-20" id="evidence-locker">
             <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
               <div className="flex items-center gap-4">
                 <div className="h-[2px] w-8" style={{ background: "#7A0F13" }} />
@@ -807,7 +871,7 @@ function StorePage() {
 
                         {/* CTA */}
                         <button
-                          onClick={() => addToCart(liveProducts[0] || products[0])}
+                          onClick={() => addToCart(displayProducts[0])}
                           className="group/cta mt-8 flex items-center gap-3 rounded-[3px] py-3.5 px-7 font-mono text-[12px] font-bold tracking-[0.2em] uppercase transition-all duration-500 cursor-pointer w-fit"
                           style={{
                             background: "linear-gradient(135deg, #7A0F13 0%, #A11418 100%)",
@@ -877,8 +941,8 @@ function StorePage() {
                     {/* Parallax Background Image */}
                     <div className="absolute inset-0 z-0 overflow-hidden">
                       <img
-                        src={products[0].image}
-                        alt={products[0].title}
+                        src={displayProducts[0].image}
+                        alt={displayProducts[0].title}
                         className="h-full w-full object-cover origin-center opacity-45 brightness-75 contrast-125 transition-transform duration-700"
                         style={{
                           transform: `translateY(${featuredParallax}px) scale(1.15)`,
@@ -905,10 +969,10 @@ function StorePage() {
                     <div className="relative z-10 flex flex-col h-full justify-between pointer-events-none">
                       {/* Top Row: Case badge & number */}
                       <div className="flex items-center justify-between w-full">
-                        {products[0].stock > 0 ? (
+                        {displayProducts[0].stock > 0 ? (
                           <span className="inline-flex items-center gap-1.5 rounded-[3px] px-2.5 py-1 font-mono text-[9px] font-bold tracking-[0.2em] uppercase border border-[#C81D24]/60 bg-black/90 text-[#FF4A50] shadow-[0_0_12px_rgba(200,29,36,0.35)] backdrop-blur-md">
                             <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#C81D24] animate-pulse" />
-                            IN STOCK · {products[0].stock} UNITS
+                            IN STOCK · {displayProducts[0].stock} UNITS
                           </span>
                         ) : (
                           <span className="inline-flex items-center gap-1.5 rounded-[3px] px-2.5 py-1 font-mono text-[9px] font-bold tracking-[0.2em] uppercase border border-red-950/60 bg-black/85 text-[#777] shadow-[0_0_8px_rgba(0,0,0,0.6)] backdrop-blur-md">
@@ -918,8 +982,8 @@ function StorePage() {
                         )}
                         <div className="flex items-center gap-3">
                           <button
-                            onClick={() => setQuickView(products[0])}
-                            className="flex h-7 w-7 items-center justify-center rounded-[3px] transition-all duration-300 hover:bg-white/10 pointer-events-auto"
+                            onClick={() => setQuickView(displayProducts[0])}
+                            className="flex h-7 w-7 items-center justify-center rounded-[3px] transition-all duration-300 hover:bg-white/10 pointer-events-auto cursor-pointer"
                             style={{
                               background: "rgba(0,0,0,0.4)",
                               border: "1px solid rgba(255,255,255,0.1)",
@@ -928,7 +992,7 @@ function StorePage() {
                             <Eye className="h-3.5 w-3.5 text-white" />
                           </button>
                           <span className="font-mono text-[10px] tracking-[0.25em] text-[#555] font-semibold">
-                            {products[0].caseNumber}
+                            {displayProducts[0].caseNumber}
                           </span>
                         </div>
                       </div>
@@ -936,27 +1000,27 @@ function StorePage() {
                       {/* Bottom section: Title, Description, Meta & Actions */}
                       <div className="pointer-events-auto">
                         <h3 className="font-display text-[18px] lg:text-[22px] tracking-[0.05em] uppercase text-white leading-tight transition-transform duration-500 group-hover:translate-x-1">
-                          {products[0].title}
+                          {displayProducts[0].title}
                         </h3>
 
                         <p className="mt-1 text-[10.5px] leading-normal text-[#888] font-sans max-w-[260px]">
-                          {products[0].description}
+                          {displayProducts[0].description}
                         </p>
 
                         {/* Evidence details / status */}
                         <div className="mt-2.5 flex flex-wrap gap-1.5 items-center text-[8.5px] font-mono text-[#666]">
                           <span className="border border-white/5 bg-white/[0.02] px-1.5 py-0.5 uppercase tracking-wider">
-                            DIFFICULTY: {products[0].difficulty}
+                            DIFFICULTY: {displayProducts[0].difficulty}
                           </span>
                           <span className="border border-white/5 bg-white/[0.02] px-1.5 py-0.5 uppercase tracking-wider">
-                            TIME: {products[0].duration}
+                            TIME: {displayProducts[0].duration}
                           </span>
                         </div>
 
                         {/* Price & Rating */}
                         <div className="mt-2.5 flex items-center justify-between border-t border-white/5 pt-1.5">
                           <span className="font-display text-[18px] font-bold text-[#C81D24]">
-                            {fmt(products[0].price)}
+                            {fmt(displayProducts[0].price)}
                           </span>
                           <div className="flex items-center gap-1">
                             {[...Array(5)].map((_, si) => (
@@ -964,13 +1028,13 @@ function StorePage() {
                                 key={si}
                                 className="h-3 w-3"
                                 style={{
-                                  fill: si < products[0].stars ? "#C81D24" : "transparent",
-                                  color: si < products[0].stars ? "#C81D24" : "#222",
+                                  fill: si < displayProducts[0].stars ? "#C81D24" : "transparent",
+                                  color: si < displayProducts[0].stars ? "#C81D24" : "#222",
                                 }}
                               />
                             ))}
                             <span className="ml-1 font-mono text-[8px] text-[#555] font-semibold">
-                              ({products[0].reviews})
+                              ({displayProducts[0].reviews})
                             </span>
                           </div>
                         </div>
@@ -978,19 +1042,19 @@ function StorePage() {
                         {/* Actions */}
                         <div className="mt-3 flex flex-col sm:flex-row gap-3">
                           <button
-                            onClick={() => addToCart(products[0])}
+                            onClick={() => addToCart(displayProducts[0])}
                             className="flex-1 flex items-center justify-center gap-2 rounded-[3px] py-2.5 font-mono text-[10px] font-bold tracking-[0.2em] uppercase transition-all duration-300 cursor-pointer"
                             style={{
-                              background: addedIds.has(products[0].id)
+                              background: addedIds.has(displayProducts[0].id)
                                 ? "rgba(20,120,20,0.8)"
                                 : "rgba(200,29,36,0.15)",
-                              border: addedIds.has(products[0].id)
+                              border: addedIds.has(displayProducts[0].id)
                                 ? "1px solid rgba(20,120,20,0.4)"
                                 : "1px solid rgba(200,29,36,0.4)",
                               color: "#fff",
                             }}
                           >
-                            {addedIds.has(products[0].id) ? (
+                            {addedIds.has(displayProducts[0].id) ? (
                               <>
                                 <ShoppingCart className="h-3.5 w-3.5" /> Added!
                               </>
@@ -1003,7 +1067,7 @@ function StorePage() {
 
                           <Link
                             to="/cases/$caseId"
-                            params={{ caseId: products[0].caseNumber.replace("CASE ", "") }}
+                            params={{ caseId: displayProducts[0].caseNumber.replace("CASE ", "") }}
                             className="group/btn flex items-center justify-center gap-2 rounded-[3px] border border-white/10 hover:border-white/20 bg-white/[0.02] hover:bg-white/[0.05] py-2.5 px-3.5 font-mono text-[10px] font-bold tracking-[0.2em] uppercase text-white transition-all duration-300"
                           >
                             <span>View Case</span>
@@ -1024,7 +1088,7 @@ function StorePage() {
                     </div>
                   </div>
 
-                  {products.slice(1).map((p, idx) => {
+                  {displayProducts.slice(1).map((p, idx) => {
                     const heights = ["230px", "265px", "240px", "255px", "245px"];
                     const cardHeight = heights[idx % heights.length];
                     const delay = idx * 0.1;
@@ -1358,38 +1422,47 @@ function StorePage() {
         </div>
 
         {/* drawer footer with totals */}
-        {items.length > 0 && (
-          <div className="border-t border-white/10 px-6 py-5 bg-[#0a0a0a]">
-            <div className="flex flex-col gap-2 font-mono text-[11px]">
-              <div className="flex justify-between text-white/60">
-                <span>Subtotal</span>
-                <span className="text-white">{fmt(subtotal)}</span>
-              </div>
-              <div className="flex justify-between text-white/60">
-                <span>Shipping</span>
-                <span className="text-emerald-400 font-bold">{subtotal >= 1499 ? "FREE" : "₹99"}</span>
-              </div>
-            </div>
+        {items.length > 0 && (() => {
+          const drawerShipping = items.reduce((sum, item) => {
+            const fee = (item as any).shippingFee !== undefined && (item as any).shippingFee !== null ? Number((item as any).shippingFee) : 0;
+            return sum + (fee * item.quantity);
+          }, 0);
 
-            <div className="mt-3.5 flex justify-between border-t border-white/10 pt-3.5 items-center">
-              <span className="font-mono text-[11px] tracking-[0.1em] uppercase text-white/70">
-                Total Amount
-              </span>
-              <span className="font-display text-[22px] font-bold text-blood">
-                {fmt(subtotal + (subtotal >= 1499 ? 0 : 99))}
-              </span>
-            </div>
+          return (
+            <div className="border-t border-white/10 px-6 py-5 bg-[#0a0a0a]">
+              <div className="flex flex-col gap-2 font-mono text-[11px]">
+                <div className="flex justify-between text-white/60">
+                  <span>Subtotal</span>
+                  <span className="text-white">{fmt(subtotal)}</span>
+                </div>
+                <div className="flex justify-between text-white/60">
+                  <span>Shipping</span>
+                  <span className="text-emerald-400 font-bold">
+                    {drawerShipping === 0 ? "FREE" : `₹${drawerShipping}`}
+                  </span>
+                </div>
+              </div>
 
-            <Link
-              to="/cart"
-              onClick={() => setCartOpen(false)}
-              className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl py-3.5 font-display text-[12px] tracking-[0.16em] uppercase text-white bg-blood hover:bg-blood/90 transition-all shadow-[0_0_25px_rgba(179,18,23,0.35)] cursor-pointer"
-            >
-              <span>View Cart & Checkout</span>
-              <ArrowRight className="h-4 w-4" />
-            </Link>
-          </div>
-        )}
+              <div className="mt-3.5 flex justify-between border-t border-white/10 pt-3.5 items-center">
+                <span className="font-mono text-[11px] tracking-[0.1em] uppercase text-white/70">
+                  Total Amount
+                </span>
+                <span className="font-display text-[22px] font-bold text-blood">
+                  {fmt(subtotal + drawerShipping)}
+                </span>
+              </div>
+
+              <Link
+                to="/cart"
+                onClick={() => setCartOpen(false)}
+                className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl py-3.5 font-display text-[12px] tracking-[0.16em] uppercase text-white bg-blood hover:bg-blood/90 transition-all shadow-[0_0_25px_rgba(179,18,23,0.35)] cursor-pointer"
+              >
+                <span>View Cart & Checkout</span>
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            </div>
+          );
+        })()}
       </div>
 
       {/* ═══════ QUICK VIEW MODAL ═══════ */}

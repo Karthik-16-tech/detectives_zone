@@ -33,22 +33,24 @@ const caseVoicemail = S3_MEDIA.cases.caseVoicemail;
 const evidenceRoom = S3_MEDIA.evidenceRoom;
 const noirStreet = S3_MEDIA.noirStreet;
 import { useRain, RainCanvas } from "@/components/RainProvider";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { ScrollReveal } from "@/components/ScrollReveal";
 import { SpotlightReveal } from "@/components/SpotlightReveal";
 import { WhatIsDetectiveZone } from "@/components/WhatIsDetectiveZone";
 import { Speakers } from "@/components/Speakers";
+import { HomeStoreSection } from "@/components/HomeStoreSection";
 import { api } from "@/lib/api";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Detective Zone — Every Shadow Has a Story" },
+      { title: "Detectives Zone — Every Shadow Has a Story" },
       {
         name: "description",
         content:
           "Step into Case File 001. Examine the scene, inspect every clue and uncover the truth hidden beneath layers of deception.",
       },
-      { property: "og:title", content: "Detective Zone — Every Shadow Has a Story" },
+      { property: "og:title", content: "Detectives Zone — Every Shadow Has a Story" },
       {
         property: "og:description",
         content: "A cinematic, story-driven investigation experience. Open the case file.",
@@ -74,30 +76,42 @@ const protocol = [
 const mysteries = [
   {
     id: 1,
-    label: "Mystery 01 — Room Key Code",
-    q: "What room number is engraved on the brass hotel key resting beside the evidence dossier?",
-    hint: "Look closely at the brass key tag on the desk next to the open police dossier. Format: 104",
-    answers: ["104", "room 104", "room104", "#104", "104.", "one hundred four", "one zero four"],
-    clue: "Room identifier — Stamped on brass hotel tag",
+    label: "Mystery 01 — Desk Clue Connection",
+    q: "If you trace the desk from the open notebook toward the newspaper, what small clue appears in between?",
+    hint: "Examine the desk surface between the open notebook and the newspaper. (e.g. The “BLACKBOX” note)",
+    answers: [
+      "the “blackbox” note",
+      "the \"blackbox\" note",
+      "the blackbox note",
+      "blackbox note",
+      "blackbox",
+      "black box note",
+      "black box",
+      "“blackbox” note",
+      "\"blackbox\" note",
+      "blackbox note.",
+      "the blackbox note.",
+      "blackbox.",
+    ],
+    clue: "Cryptic Desk Clue — Located between the notebook and newspaper",
   },
   {
     id: 2,
-    label: "Mystery 02 — Audio Evidence Device",
-    q: "What audio recording device is connected to the telephone on the detective's desk?",
-    hint: "The analog cassette machine sitting near the lamp that recorded the final voicemail. (e.g. Tape Recorder / Cassette Player)",
+    label: "Mystery 02 — Window & Shelf Artifact",
+    q: "If you look beside the rain-covered window and move toward the shelf, what object stands there among the books?",
+    hint: "Inspect the shelf area adjacent to the rain-soaked window beside the stacked books. (e.g. The statue)",
     answers: [
-      "tape recorder",
-      "cassette recorder",
-      "recorder",
-      "audio recorder",
-      "cassette player",
-      "voice recorder",
-      "cassette",
-      "tape",
-      "voicemail recorder",
-      "cassette tape recorder",
+      "the statue",
+      "statue",
+      "a statue",
+      "the statue.",
+      "statue.",
+      "bust",
+      "the bust",
+      "sculpture",
+      "the sculpture",
     ],
-    clue: "Analog equipment — Capturing the last incoming transmission",
+    clue: "Shelf Observation — Resting beside books near the rain-covered window",
   },
   {
     id: 3,
@@ -135,38 +149,70 @@ const mysteries = [
 function SpotlightBox() {
   const containerRef = useRef<HTMLDivElement>(null);
   const [coords, setCoords] = useState({ x: 50, y: 50 });
+  const [isHovered, setIsHovered] = useState(false);
 
-  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+  const updatePosition = (clientX: number, clientY: number) => {
     if (!containerRef.current) return;
     const rect = containerRef.current.getBoundingClientRect();
-    const x = ((e.clientX - rect.left) / rect.width) * 100;
-    const y = ((e.clientY - rect.top) / rect.height) * 100;
+    const x = ((clientX - rect.left) / rect.width) * 100;
+    const y = ((clientY - rect.top) / rect.height) * 100;
     setCoords({ x, y });
+    setIsHovered(true);
+  };
+
+  const handleMouseEnter = (e: React.MouseEvent<HTMLDivElement>) => {
+    updatePosition(e.clientX, e.clientY);
+  };
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    updatePosition(e.clientX, e.clientY);
   };
 
   const handleMouseLeave = () => {
-    setCoords({ x: 50, y: 50 });
+    setIsHovered(false);
+  };
+
+  const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (e.touches.length > 0) {
+      updatePosition(e.touches[0].clientX, e.touches[0].clientY);
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (e.touches.length > 0) {
+      updatePosition(e.touches[0].clientX, e.touches[0].clientY);
+    }
+  };
+
+  const handleTouchEnd = () => {
+    setIsHovered(false);
   };
 
   return (
     <div
       ref={containerRef}
       id="spotlight-container"
-      className="relative grid min-h-[460px] place-items-center overflow-hidden rounded-[24px] border border-white/10 bg-[#0a0a0a] px-6 text-center"
+      className="relative grid min-h-[460px] place-items-center overflow-hidden rounded-[24px] border border-white/10 bg-[#0a0a0a] px-6 text-center select-none"
       style={{
         backgroundImage: "linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px)",
         backgroundSize: "40px 40px",
         cursor: "crosshair",
       }}
+      onMouseEnter={handleMouseEnter}
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
     >
-      {/* The Spotlight Overlay */}
+      {/* The Spotlight Overlay - 100% black until cursor enters */}
       <div
         id="spotlight-overlay"
-        className="pointer-events-none absolute inset-0 z-10"
+        className="pointer-events-none absolute inset-0 z-10 transition-opacity duration-200"
         style={{
-          background: `radial-gradient(220px at ${coords.x}% ${coords.y}%, transparent 0%, rgba(10, 10, 10, 0.97) 100%)`,
+          background: isHovered
+            ? `radial-gradient(220px at ${coords.x}% ${coords.y}%, transparent 0%, rgba(10, 10, 10, 0.98) 100%)`
+            : "rgba(10, 10, 10, 0.99)",
         }}
       />
 
@@ -174,11 +220,11 @@ function SpotlightBox() {
       <div className="relative z-0 max-w-xl">
         <p className="font-mono text-xs uppercase tracking-widest text-muted-foreground">// move the light</p>
         <h2 className="mt-5 text-4xl font-bold text-white sm:text-5xl" style={{ fontFamily: "'Oswald', sans-serif" }}>
-          Detective Zone isn't just a game.
+          Detectives Zone isn't just a game.
           <span className="block text-blood mt-2" style={{ textShadow: "0 0 20px rgba(211,47,47,0.3)" }}>It's an investigation.</span>
         </h2>
         <p className="mt-6 font-mono text-sm tracking-[0.3em] text-gray-400">
-          OBSERVE ┬╖ DEDUCE ┬╖ SOLVE
+          OBSERVE • DEDUCE • SOLVE
         </p>
       </div>
     </div>
@@ -186,19 +232,27 @@ function SpotlightBox() {
 }
 
 function FloatingParticles({ count = 18 }: { count?: number }) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const particles = useMemo(
     () =>
       Array.from({ length: count }, (_, i) => ({
         id: i,
-        x: Math.random() * 100,
-        y: Math.random() * 100,
-        size: 1 + Math.random() * 2.5,
-        dur: 6 + Math.random() * 10,
-        delay: Math.random() * 8,
-        opacity: 0.15 + Math.random() * 0.3,
+        x: ((i * 37 + 19) % 96) + 2,
+        y: ((i * 47 + 13) % 94) + 3,
+        size: 1.5 + ((i * 7) % 3),
+        dur: 6 + ((i * 3) % 7),
+        delay: (i * 0.4) % 4,
+        opacity: 0.15 + (((i * 9) % 25) / 100),
       })),
     [count],
   );
+
+  if (!mounted) return null;
+
   return (
     <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
       {particles.map((p) => (
@@ -348,6 +402,7 @@ function ChallengeCard({ mystery, value, solved, onChange, onSubmit }: Challenge
 
 function Home() {
   const { enabled } = useRain();
+  const isMobile = useIsMobile();
   const [offset, setOffset] = useState(0);
   const heroRef = useRef<HTMLElement | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -426,9 +481,7 @@ function Home() {
     let didFirstMove = false;
 
     const onReady = () => {
-      if (!didFirstMove) {
-        video.play().catch(() => {});
-      }
+      video.play().catch(() => {});
     };
 
     if (video.readyState >= 1) {
@@ -461,26 +514,10 @@ function Home() {
     };
     video.addEventListener("seeked", onSeeked);
 
-    // --- pointer handlers ---
+    // --- pointer handlers for desktop mouse interaction ---
     const onMove = (e: MouseEvent | PointerEvent) => {
-      if (!didFirstMove) {
-        didFirstMove = true;
-        try {
-          video.pause();
-        } catch {
-          /* noop */
-        }
-        const d = video.duration;
-        if (Number.isFinite(d) && d > 0) {
-          currentProgress = Math.max(0, Math.min(1, video.currentTime / d));
-        }
-      }
-      targetProgress = Math.max(0, Math.min(1, 1 - e.clientX / window.innerWidth));
-      settled = false;
-    };
-
-    const onTouch = (e: TouchEvent) => {
-      if (e.touches?.[0]) {
+      // Only scrub on desktop fine pointer devices
+      if (window.matchMedia("(pointer: fine)").matches) {
         if (!didFirstMove) {
           didFirstMove = true;
           try {
@@ -493,7 +530,7 @@ function Home() {
             currentProgress = Math.max(0, Math.min(1, video.currentTime / d));
           }
         }
-        targetProgress = Math.max(0, Math.min(1, 1 - e.touches[0].clientX / window.innerWidth));
+        targetProgress = Math.max(0, Math.min(1, 1 - e.clientX / window.innerWidth));
         settled = false;
       }
     };
@@ -525,8 +562,6 @@ function Home() {
 
     window.addEventListener("pointermove", onMove, { passive: true });
     window.addEventListener("mousemove", onMove, { passive: true });
-    window.addEventListener("touchmove", onTouch, { passive: true });
-    window.addEventListener("touchstart", onTouch, { passive: true });
 
     return () => {
       cancelAnimationFrame(raf);
@@ -535,8 +570,6 @@ function Home() {
       video.removeEventListener("seeked", onSeeked);
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("mousemove", onMove);
-      window.removeEventListener("touchmove", onTouch);
-      window.removeEventListener("touchstart", onTouch);
     };
   }, [activeHeroVideo]);
 
@@ -552,18 +585,21 @@ function Home() {
       <section
         id="home"
         ref={heroRef}
-        className="relative h-screen w-full overflow-hidden bg-black text-neutral-100 select-none"
+        className="relative mt-[50px] h-[calc(100svh-50px)] w-full overflow-hidden bg-black text-neutral-100 select-none flex flex-col justify-between"
       >
-        {/* Scrubbable Background Video (Minimal Scale, Offset Right & Lower Position) */}
+        {/* Background Video (Seamless cinematic fit across mobile, tablet, and slightly zoomed desktop) */}
         <video
           ref={videoRef}
           src={activeHeroVideo}
-          muted
-          playsInline
           autoPlay
+          muted
           loop
+          playsInline
           preload="auto"
-          className="absolute inset-0 m-auto h-full w-full object-contain pointer-events-none scale-[1.02] lg:scale-[1.03] translate-x-[6%] lg:translate-x-[10%] translate-y-[4%] lg:translate-y-[5.5%]"
+          controlsList="nodownload"
+          disablePictureInPicture
+          aria-hidden="true"
+          className="absolute inset-0 m-auto h-full w-full min-w-full min-h-full pointer-events-none z-0 object-cover object-[68%_22%] md:object-[80%_20%] lg:min-w-0 lg:min-h-0 lg:object-contain lg:scale-[1.08] lg:translate-x-[7%] lg:-translate-y-[2%]"
         />
 
         {/* Rain and Atmosphere overlays */}
@@ -576,33 +612,34 @@ function Home() {
         <div
           className="pointer-events-none absolute inset-0"
           style={{
-            background:
-              "radial-gradient(60% 55% at 50% 50%, rgba(179,18,23,0.12), transparent 70%), linear-gradient(90deg, #050505 18%, rgba(5,5,5,0.65) 45%, rgba(5,5,5,0.2) 70%, #050505 95%), linear-gradient(0deg, #050505 6%, transparent 40%)",
+            background: isMobile
+              ? "linear-gradient(90deg, rgba(2,2,2,0.82) 18%, rgba(2,2,2,0.35) 44%, transparent 70%), linear-gradient(0deg, rgba(2,2,2,0.7) 0%, transparent 22%)"
+              : "radial-gradient(60% 55% at 50% 50%, rgba(179,18,23,0.12), transparent 70%), linear-gradient(90deg, #020202 18%, rgba(5,5,5,0.65) 45%, rgba(5,5,5,0.2) 70%, #020202 95%), linear-gradient(0deg, #020202 10%, transparent 40%)",
           }}
         />
 
-        {/* Left heading & Action CTA (Navbar transparent above, heading preserved) */}
-        <div className="pointer-events-none absolute inset-0 mx-auto max-w-[1400px] px-6 sm:px-10 lg:px-12 flex items-center justify-between pt-16">
-          <div className="pointer-events-auto w-[50%] max-w-[540px] rise">
+        {/* Left heading & Action CTA */}
+        <div className="pointer-events-none absolute inset-0 mx-auto max-w-[1600px] px-6 sm:px-10 lg:px-12 flex items-center justify-between">
+          <div className="pointer-events-auto w-[85%] sm:w-[65%] lg:w-[50%] max-w-[540px] rise">
             <div className="flex items-center gap-3">
-              <span className="h-px w-10 bg-blood" />
-              <Fingerprint className="h-5 w-5 text-blood" />
+              <span className="h-px w-8 sm:w-10 bg-blood" />
+              <Fingerprint className="h-4 w-4 sm:h-5 sm:w-5 text-blood" />
               <span className="font-mono text-[9px] tracking-[0.35em] text-blood uppercase font-medium">Noir / 01</span>
             </div>
             <h1
-              className="mt-6 font-display font-bold tracking-[-0.02em] uppercase"
-              style={{ fontSize: "clamp(52px, 5.8vw, 84px)", lineHeight: 0.9 }}
+              className="mt-5 sm:mt-6 font-display font-bold tracking-[-0.02em] uppercase"
+              style={{ fontSize: isMobile ? "clamp(36px, 9.2vw, 52px)" : "clamp(52px, 5.8vw, 84px)", lineHeight: isMobile ? 0.95 : 0.9 }}
             >
               <span className="block text-foreground">Detectives</span>
               <span className="block text-blood">Zone</span>
             </h1>
-            <span className="mt-5 block h-[3px] w-[54px] bg-blood" />
+            <span className="mt-4 sm:mt-5 block h-[3px] w-[40px] sm:w-[54px] bg-blood" />
 
             <Link
               to="/cases"
               onPointerDown={(e) => e.stopPropagation()}
-              className="group relative mt-8 flex items-center justify-center gap-2.5 overflow-hidden bg-blood font-display text-[11px] font-semibold tracking-[0.2em] uppercase transition-all duration-300 hover:scale-[1.03]"
-              style={{ width: 196, height: 46 }}
+              className="group relative mt-7 sm:mt-8 flex items-center justify-center gap-2.5 overflow-hidden bg-blood font-display text-[11px] font-semibold tracking-[0.2em] uppercase transition-all duration-300 hover:scale-[1.03]"
+              style={{ width: isMobile ? 180 : 196, height: isMobile ? 44 : 46 }}
             >
               <span className="absolute inset-0 origin-left scale-x-0 bg-foreground/10 transition-transform duration-500 group-hover:scale-x-100" />
               <Fingerprint className="relative h-3.5 w-3.5" />
@@ -613,15 +650,20 @@ function Home() {
         </div>
       </section>
 
-      {/* Smooth Black Page Transition below the Hero Section */}
+      {/* Seamless Smooth Black Page Transition below the Hero Section */}
       <div
-        className="pointer-events-none relative z-10 w-full h-16 sm:h-24 -mt-1"
+        className="pointer-events-none relative z-10 w-full h-24 sm:h-32 -mt-16 sm:-mt-20"
         style={{
-          background: "linear-gradient(180deg, #000000 0%, #040404 60%, transparent 100%)",
+          background: "linear-gradient(180deg, transparent 0%, #020202 60%, #020202 100%)",
         }}
       />
 
-      {/* STRIP ΓÇö EvidenceCard paper-clip style */}
+      {/* STORE / CASE FILES SECTION — Exact Visual Recreation of Reference Design */}
+      <ScrollReveal>
+        <HomeStoreSection />
+      </ScrollReveal>
+
+      {/* STRIP — EvidenceCard paper-clip style */}
       <ScrollReveal>
         <section className="shell mt-30">
           <style>{`
@@ -648,8 +690,8 @@ function Home() {
               100%{transform:scale(1) rotate(0deg);opacity:1}
             }
           `}          </style>
-          <p className="caption text-blood" style={{ marginBottom: 28 }}>File 002 — About</p>
-          <div className="grid grid-cols-3 gap-6 pt-2 pb-10">
+          <p className="caption text-blood" style={{ marginBottom: 28 }}>// Field Protocol — Investigation Methodology</p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-2 pb-10">
             {([
               { id: "DZ-001", step: "01", title: "Observe", quote: "Examine every scene, every detail. Nothing escapes the trained eye.", by: "Field Protocol" },
               { id: "DZ-002", step: "02", title: "Deduce", quote: "Find patterns others choose to ignore. Logic is your only weapon.", by: "Investigation Manual" },
@@ -720,7 +762,7 @@ function Home() {
                 <span className="pointer-events-none absolute -bottom-8 -right-6 h-24 w-24 rounded-full border-4" style={{ borderColor: "rgba(139,90,30,0.25)" }} />
 
                 {/* Grain texture */}
-                <div className="pointer-events-none absolute inset-0 opacity-[0.03] mix-blend-overlay" style={{ background: "url('https://grainy-gradients.vercel.app/noise.svg')" }} />
+                <div className="pointer-events-none absolute inset-0 opacity-[0.035] mix-blend-overlay" style={{ backgroundImage: "radial-gradient(rgba(255,255,255,0.15) 1px, transparent 0)", backgroundSize: "4px 4px" }} />
               </blockquote>
             ))}
           </div>
@@ -729,42 +771,45 @@ function Home() {
 
       {/* ABOUT — scrolls below the hero */}
       <ScrollReveal>
-        <section id="about" className="shell mt-32 scroll-mt-[64px]">
-          <div className="grid grid-cols-12 items-center gap-8">
-            <div className="col-span-5">
-              <p className="caption text-blood">File 002 — About</p>
-              <h2 className="mt-6 font-display text-[46px] leading-[0.95] font-bold uppercase">
+        <section id="about" className="shell mt-20 sm:mt-28 lg:mt-32 scroll-mt-[64px]">
+          <div className="flex flex-col lg:grid lg:grid-cols-12 lg:items-center gap-8 lg:gap-12">
+            <div className="w-full lg:col-span-5">
+              <p className="font-mono text-[11px] sm:text-[12px] tracking-[0.24em] text-blood uppercase font-medium">
+                // ABOUT — AGENCY ORIGIN & MISSION
+              </p>
+              <h2 className="mt-5 sm:mt-6 font-display text-[40px] sm:text-[46px] lg:text-[50px] leading-[0.92] font-black uppercase tracking-tight text-white">
                 {cmsSettings.about_heading || (
                   <>
-                    Every shadow
+                    EVERY SHADOW
                     <br />
-                    has a story
+                    HAS A STORY
                   </>
                 )}
               </h2>
-              <span className="mt-6 block h-[3px] w-[60px] bg-blood" />
-              <p className="mt-6 max-w-md text-[14px] leading-relaxed text-muted-foreground">
-                {cmsSettings.about_text || "Detective Zone is a story-driven investigation experience. Each case is written like a dossier — statements, photographs, timelines — and nothing is handed to you. You read the room, you weigh the lies, you close the file."}
-              </p>
-              <a
-                href="#challenge"
-                onClick={(e) => {
-                  e.preventDefault();
-                  document.getElementById("challenge")?.scrollIntoView({ behavior: "smooth" });
-                }}
-                className="group mt-9 inline-flex items-center gap-3 border border-border px-7 font-display text-[12px] tracking-[0.22em] uppercase transition-colors duration-500 hover:border-blood"
-                style={{ height: 54 }}
-              >
-                Open the briefing
-                <ArrowRight className="h-4 w-4 transition-transform duration-500 group-hover:translate-x-1" />
-              </a>
+              <div className="mt-5 sm:mt-6 max-w-lg space-y-4 text-[14px] sm:text-[15px] leading-relaxed text-white/75">
+                <p>
+                  Detective Zone creates immersive, cinematic mystery cases where you become the detective and uncover the truth through clues, evidence, and deduction.
+                </p>
+                <p className="font-bold text-white tracking-wide">
+                  Observe. Investigate. Connect the clues. Solve the case.
+                </p>
+              </div>
+              <div className="mt-7 sm:mt-9">
+                <Link
+                  to="/about"
+                  className="group inline-flex items-center justify-between sm:justify-start gap-4 border border-white/20 bg-black/40 backdrop-blur px-6 font-mono text-[11px] sm:text-[12px] tracking-[0.24em] uppercase text-white transition-all duration-300 hover:border-blood hover:bg-blood/10 w-full sm:w-auto h-[50px] sm:h-[54px]"
+                >
+                  <span>OPEN THE BRIEFING</span>
+                  <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
+                </Link>
+              </div>
             </div>
-            <div className="col-span-7">
+            <div className="w-full lg:col-span-7 mt-2 sm:mt-4 lg:mt-0">
               <img
                 src={cmsSettings.about_image || noirStreet}
                 alt="Rain-soaked noir street at night"
                 loading="lazy"
-                className="h-[420px] w-full rounded-[12px] object-cover grayscale"
+                className="h-[360px] sm:h-[420px] lg:h-[440px] w-full rounded-[6px] sm:rounded-[12px] object-cover grayscale contrast-110 shadow-2xl"
               />
             </div>
           </div>
@@ -798,8 +843,14 @@ function Home() {
               src={cmsSettings.challenge_image || evidenceRoom}
               alt="Hotel room evidence scene — Room 104"
               loading="lazy"
-              style={{ width: "100%", height: 400, objectFit: "cover", display: "block",
-                transition: "transform 4s ease-in-out", transform: breathe ? "scale(1.04)" : "scale(1.0)" }}
+              style={{
+                width: "100%",
+                height: "clamp(440px, 42vw, 680px)",
+                objectFit: "cover",
+                display: "block",
+                transition: "transform 4s ease-in-out",
+                transform: breathe ? "scale(1.04)" : "scale(1.0)",
+              }}
             />
             <div aria-hidden style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(9,9,9,0.5) 0%, transparent 50%), linear-gradient(to right, rgba(9,9,9,0.2) 0%, transparent 35%)", pointerEvents: "none" }} />
             <div aria-hidden style={{ position: "absolute", inset: 0, background: "repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,0,0,0.05) 3px, rgba(0,0,0,0.05) 4px)", pointerEvents: "none" }} />
@@ -818,7 +869,7 @@ function Home() {
           </div>
 
           {/* Mystery cards */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 18, marginBottom: 18 }}>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-5">
             {mysteries.map((m) => (
               <ChallengeCard
                 key={m.id}
@@ -843,9 +894,9 @@ function Home() {
                 </div>
                 <div>
                   {challengeUnlocked ? (
-                    <p style={{ fontFamily: "'Oswald', sans-serif", fontSize: 20, letterSpacing: "0.2em", color: "#ECECEC", textTransform: "uppercase" }}>Access Granted ΓÇö 25% Off Unlocked</p>
+                    <p style={{ fontFamily: "'Oswald', sans-serif", fontSize: 20, letterSpacing: "0.2em", color: "#ECECEC", textTransform: "uppercase" }}>Challenge Cleared — You Have Successfully Finished</p>
                   ) : (
-                    <p style={{ fontFamily: "IBM Plex Mono, monospace", fontSize: 10, letterSpacing: "0.2em", color: "#666", textTransform: "uppercase" }}>Complete all three mysteries ΓÇö {solvedCount}/{mysteries.length} verified</p>
+                    <p style={{ fontFamily: "IBM Plex Mono, monospace", fontSize: 10, letterSpacing: "0.2em", color: "#666", textTransform: "uppercase" }}>Complete all three mysteries — {solvedCount}/{mysteries.length} verified</p>
                   )}
                   <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 7 }}>
                     {mysteries.map((m) => (
@@ -856,10 +907,10 @@ function Home() {
               </div>
               {challengeUnlocked ? (
                 <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-                  <span style={{ fontFamily: "'Oswald', sans-serif", fontSize: 16, letterSpacing: "0.22em", color: "#D32F2F", border: "2px solid #D32F2F", padding: "5px 16px", transform: "rotate(-3deg)", textShadow: "0 0 18px rgba(211,47,47,0.5)", animation: successBurst ? "dz-ch-stamp-drop 0.6s cubic-bezier(0.34,1.56,0.64,1) forwards" : "none" }}>Case Solved</span>
+                  <span style={{ fontFamily: "'Oswald', sans-serif", fontSize: 16, letterSpacing: "0.22em", color: "#D32F2F", border: "2px solid #D32F2F", padding: "5px 16px", transform: "rotate(-3deg)", textShadow: "0 0 18px rgba(211,47,47,0.5)", animation: successBurst ? "dz-ch-stamp-drop 0.6s cubic-bezier(0.34,1.56,0.64,1) forwards" : "none" }}>Successfully Finished</span>
                   <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                     <Check style={{ width: 16, height: 16, color: "#D32F2F" }} />
-                    <span style={{ fontFamily: "IBM Plex Mono, monospace", fontSize: 9, letterSpacing: "0.14em", color: "#D32F2F", textTransform: "uppercase" }}>CODE: DZ25-SOLVED</span>
+                    <span style={{ fontFamily: "IBM Plex Mono, monospace", fontSize: 9, letterSpacing: "0.14em", color: "#D32F2F", textTransform: "uppercase" }}>All Evidence Cleared</span>
                   </div>
                 </div>
               ) : (

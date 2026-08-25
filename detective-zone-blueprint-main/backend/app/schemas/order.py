@@ -149,6 +149,7 @@ class PaymentCreateRequest(BaseModel):
     redirect_url: Optional[str] = None
 
 class PaymentCreateResponse(BaseModel):
+    success: bool = True
     merchant_transaction_id: str
     order_id: int
     order_number: str
@@ -158,8 +159,11 @@ class PaymentCreateResponse(BaseModel):
     qr_payload: str
     qr_image_url: str
     payment_url: Optional[str] = None
+    redirect_url: Optional[str] = None
     status: str = "PENDING"
     expires_in_seconds: int = 600
+    payment_created_at: Optional[datetime] = None
+    payment_expires_at: Optional[datetime] = None
 
 class PaymentStatusResponse(BaseModel):
     merchant_transaction_id: str
@@ -167,12 +171,17 @@ class PaymentStatusResponse(BaseModel):
     order_number: str
     amount: float
     currency: str = "INR"
-    payment_status: str # PENDING, PAID, FAILED, EXPIRED
-    order_status: str # PENDING_PAYMENT, PAYMENT_CONFIRMED, PAYMENT_FAILED
+    payment_status: str # PENDING, PAID, FAILED, EXPIRED, SUCCESS
+    order_status: str # PENDING_PAYMENT, PAYMENT_CONFIRMED, PAYMENT_FAILED, EXPIRED
     provider: str = "PHONEPE"
     provider_transaction_id: Optional[str] = None
     verified_at: Optional[datetime] = None
     paid_at: Optional[datetime] = None
+    payment_created_at: Optional[datetime] = None
+    payment_expires_at: Optional[datetime] = None
+    expires_at: Optional[datetime] = None
+    seconds_remaining: Optional[int] = None
+    is_expired: bool = False
     message: str
 
 class PhonePeWebhookRequest(BaseModel):
@@ -182,3 +191,44 @@ class AdminReconcilePaymentRequest(BaseModel):
     reason: str
     provider_transaction_id: Optional[str] = None
     action: str = "CONFIRM_PAYMENT" # CONFIRM_PAYMENT, MARK_FAILED
+
+class SubmitUtrRequest(BaseModel):
+    utr_number: str
+
+class RazorpayCreateOrderRequest(BaseModel):
+    order_id: int
+
+class RazorpayCreateOrderResponse(BaseModel):
+    success: bool = True
+    key_id: str
+    order_id: int
+    order_number: str
+    razorpay_order_id: str
+    amount: float
+    amount_in_paise: int
+    currency: str = "INR"
+    customer_name: str
+    customer_email: str
+    customer_phone: Optional[str] = None
+    payment_url: Optional[str] = None
+
+class RazorpayVerifyRequest(BaseModel):
+    order_id: int
+    razorpay_order_id: Optional[str] = None
+    razorpay_payment_id: str
+    razorpay_signature: str
+    razorpay_payment_link_id: Optional[str] = None
+    razorpay_payment_link_reference_id: Optional[str] = None
+    razorpay_payment_link_status: Optional[str] = None
+
+class RazorpayVerifyResponse(BaseModel):
+    success: bool = True
+    order_id: int
+    order_number: str
+    payment_status: str
+    order_status: str
+    razorpay_payment_id: str
+    amount: float
+    customer_name: Optional[str] = None
+    customer_email: Optional[str] = None
+    message: str

@@ -6,6 +6,7 @@ export interface CartItem {
   title: string;
   caseNumber: string;
   price: number;
+  shippingFee?: number;
   quantity: number;
   image: string;
   type: string;
@@ -52,7 +53,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     let nextItems: CartItem[];
     if (existingIndex > -1) {
       nextItems = items.map((item, idx) =>
-        idx === existingIndex ? { ...item, quantity: item.quantity + 1 } : item,
+        idx === existingIndex
+          ? { ...item, ...newItem, quantity: item.quantity + 1 }
+          : item,
       );
     } else {
       nextItems = [...items, { ...newItem, quantity: 1 }];

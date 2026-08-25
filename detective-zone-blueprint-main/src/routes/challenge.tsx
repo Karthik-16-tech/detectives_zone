@@ -29,38 +29,42 @@ export const Route = createFileRoute("/challenge")({
 const mysteries = [
   {
     id: 1,
-    label: "Mystery 01 — Room Key Code",
-    q: "What room number is engraved on the brass hotel key resting beside the evidence dossier?",
-    hint: "Look closely at the brass key tag on the desk next to the open police dossier. Format: 104",
+    label: "Mystery 01 — Desk Clue Connection",
+    q: "If you trace the desk from the open notebook toward the newspaper, what small clue appears in between?",
+    hint: "Examine the desk surface between the open notebook and the newspaper. (e.g. The “BLACKBOX” note)",
     answers: [
-      "104",
-      "room 104",
-      "room104",
-      "#104",
-      "104.",
-      "one hundred four",
-      "one zero four",
+      "the “blackbox” note",
+      "the \"blackbox\" note",
+      "the blackbox note",
+      "blackbox note",
+      "blackbox",
+      "black box note",
+      "black box",
+      "“blackbox” note",
+      "\"blackbox\" note",
+      "blackbox note.",
+      "the blackbox note.",
+      "blackbox.",
     ],
-    clue: "Room identifier — Stamped on brass hotel tag",
+    clue: "Cryptic Desk Clue — Located between the notebook and newspaper",
   },
   {
     id: 2,
-    label: "Mystery 02 — Audio Evidence Device",
-    q: "What audio recording device is connected to the telephone on the detective's desk?",
-    hint: "The analog cassette machine sitting near the lamp that recorded the final voicemail. (e.g. Tape Recorder / Cassette Player)",
+    label: "Mystery 02 — Window & Shelf Artifact",
+    q: "If you look beside the rain-covered window and move toward the shelf, what object stands there among the books?",
+    hint: "Inspect the shelf area adjacent to the rain-soaked window beside the stacked books. (e.g. The statue)",
     answers: [
-      "tape recorder",
-      "cassette recorder",
-      "recorder",
-      "audio recorder",
-      "cassette player",
-      "voice recorder",
-      "cassette",
-      "tape",
-      "voicemail recorder",
-      "cassette tape recorder",
+      "the statue",
+      "statue",
+      "a statue",
+      "the statue.",
+      "statue.",
+      "bust",
+      "the bust",
+      "sculpture",
+      "the sculpture",
     ],
-    clue: "Analog equipment — Capturing the last incoming transmission",
+    clue: "Shelf Observation — Resting beside books near the rain-covered window",
   },
   {
     id: 3,
@@ -592,7 +596,7 @@ function Challenge() {
             ease={0.12}
             style={{
               borderRadius: 20,
-              minHeight: 420,
+              minHeight: "clamp(460px, 38vw, 620px)",
               overflow: "hidden",
               border: "1px solid rgba(255,255,255,0.06)",
               position: "relative",
@@ -608,7 +612,7 @@ function Challenge() {
                 height: "100%",
                 objectFit: "cover",
                 display: "block",
-                minHeight: 420,
+                minHeight: "clamp(460px, 38vw, 620px)",
                 transition: "transform 4s ease-in-out",
                 transform: breathe ? "scale(1.04)" : "scale(1.0)",
               }}
@@ -938,31 +942,31 @@ function Challenge() {
                       marginBottom: 3,
                     }}
                   >
-                    Reward
+                    Achievement
                   </p>
                   <p
                     style={{
                       fontFamily: "'Bebas Neue', Impact, sans-serif",
-                      fontSize: 32,
+                      fontSize: 26,
                       lineHeight: 1,
                       letterSpacing: "0.04em",
                       color: "#D32F2F",
                       textShadow: "0 0 20px rgba(211,47,47,0.4)",
                     }}
                   >
-                    25% OFF
+                    MASTER DETECTIVE
                   </p>
                   <p
                     style={{
                       fontFamily: "IBM Plex Mono, monospace",
                       fontSize: 9,
                       letterSpacing: "0.14em",
-                      color: "#555",
+                      color: "#777",
                       textTransform: "uppercase",
                       marginTop: 2,
                     }}
                   >
-                    On Case File 001
+                    Solve All 3 Mysteries
                   </p>
                 </div>
               </div>
@@ -1088,12 +1092,12 @@ function Challenge() {
                     style={{
                       fontFamily: "'Bebas Neue', Impact, sans-serif",
                       fontSize: 22,
-                      letterSpacing: "0.2em",
+                      letterSpacing: "0.18em",
                       color: "#ECECEC",
                       textTransform: "uppercase",
                     }}
                   >
-                    Access Granted — 25% Off Unlocked
+                    Challenge Cleared — You Have Successfully Finished
                   </p>
                 ) : (
                   <p
@@ -1147,7 +1151,7 @@ function Challenge() {
                     animation: successBurst ? "dz-stamp-drop 0.6s cubic-bezier(0.34,1.56,0.64,1) forwards" : "none",
                   }}
                 >
-                  Case Solved
+                  Successfully Finished
                 </span>
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                   <Check style={{ width: 18, height: 18, color: "#D32F2F" }} />
@@ -1160,7 +1164,7 @@ function Challenge() {
                       textTransform: "uppercase",
                     }}
                   >
-                    CODE: DZ25-SOLVED
+                    All Evidence Cleared
                   </span>
                 </div>
               </div>

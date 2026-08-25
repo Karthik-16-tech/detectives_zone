@@ -36,14 +36,14 @@ export function SkiperTextRevealH({
   return (
     <motion.p
       className={className}
-      style={style}
+      style={{ ...style, wordBreak: "break-word" }}
       aria-label={words.map((w) => w.text).join(" ")}
       initial="hidden"
       whileInView="visible"
-      viewport={{ once: false, margin: "-12% 0px" }}
+      viewport={{ once: true, margin: "0px 0px -40px 0px" }}
       variants={{
         hidden: {},
-        visible: { transition: { staggerChildren: 0.07 } },
+        visible: { transition: { staggerChildren: 0.04 } },
       }}
     >
       {words.map((word, i) => (
@@ -52,19 +52,18 @@ export function SkiperTextRevealH({
             <motion.span
               className="inline-block"
               variants={{
-                hidden: { x: 60, opacity: 0, skewY: 8 },
+                hidden: { y: "100%", opacity: 0 },
                 visible: {
-                  x: 0,
+                  y: 0,
                   opacity: 1,
-                  skewY: 0,
-                  transition: { duration: 0.7, ease: [0.22, 1, 0.36, 1] },
+                  transition: { duration: 0.55, ease: [0.22, 1, 0.36, 1] },
                 },
               }}
             >
               {word.text}
             </motion.span>
           </span>
-          {i < words.length - 1 ? "\u00A0" : null}
+          {i < words.length - 1 ? " " : null}
         </Fragment>
       ))}
     </motion.p>

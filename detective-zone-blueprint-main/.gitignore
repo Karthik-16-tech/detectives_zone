@@ -30,3 +30,18 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Environment variables
+.env
+*.env
+backend/.env
+backend/.env.local
+
+# Backend temporary files
+backend/backups/
+backend/*.db
+backend/uploads/
+__pycache__/
+*.pyc
+
+

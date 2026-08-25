@@ -46,19 +46,21 @@ class Settings(BaseSettings):
     UPLOAD_DIR: str = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "uploads"))
     MAX_UPLOAD_SIZE_MB: int = 100
     
-    # SMTP / Email Server Configuration (supports both SMTP_* and EMAIL_* env names)
+    # Resend & SMTP Email Configuration
+    RESEND_API_KEY: str = os.getenv("RESEND_API_KEY", "")
+    RESEND_FROM_EMAIL: str = os.getenv("RESEND_FROM_EMAIL", "orders@detectiveszone.com")
     SMTP_HOST: str = os.getenv("SMTP_HOST") or os.getenv("EMAIL_HOST") or "smtp.gmail.com"
     SMTP_PORT: int = int(os.getenv("SMTP_PORT") or os.getenv("EMAIL_PORT") or "587")
-    SMTP_USER: str = os.getenv("SMTP_USER") or os.getenv("EMAIL_USERNAME") or os.getenv("EMAIL_USER") or "pallasrikarcharan@gmail.com"
-    SMTP_PASSWORD: str = os.getenv("SMTP_PASSWORD") or os.getenv("EMAIL_PASSWORD") or ""
-    SMTP_FROM_EMAIL: str = os.getenv("SMTP_FROM_EMAIL") or os.getenv("EMAIL_FROM") or "pallasrikarcharan@gmail.com"
+    SMTP_USER: str = os.getenv("SMTP_USER") or os.getenv("EMAIL_USERNAME") or os.getenv("EMAIL_USER") or "detectiveszonesupport@gmail.com"
+    SMTP_PASSWORD: str = (os.getenv("SMTP_PASSWORD") or os.getenv("EMAIL_PASSWORD") or "").replace(" ", "")
+    SMTP_FROM_EMAIL: str = os.getenv("SMTP_FROM_EMAIL") or os.getenv("EMAIL_FROM") or "detectiveszonesupport@gmail.com"
     SMTP_FROM_NAME: str = os.getenv("SMTP_FROM_NAME") or os.getenv("EMAIL_FROM_NAME") or "Detectives Zone"
     SMTP_USE_TLS: bool = (os.getenv("SMTP_USE_TLS") or os.getenv("EMAIL_USE_TLS") or "true").lower() in ("true", "1", "yes")
     SMTP_USE_SSL: bool = (os.getenv("SMTP_USE_SSL") or os.getenv("EMAIL_USE_SSL") or "false").lower() in ("true", "1", "yes")
 
     # PhonePe Payment Gateway Configuration
-    PHONEPE_MERCHANT_ID: str = os.getenv("PHONEPE_MERCHANT_ID", "PGTESTPAYUAT")
-    PHONEPE_SALT_KEY: str = os.getenv("PHONEPE_SALT_KEY", "099eb0cd-02cf-4e2a-8aca-3e6c6aff0399")
+    PHONEPE_MERCHANT_ID: str = os.getenv("PHONEPE_MERCHANT_ID", "PGTESTPAYUAT86")
+    PHONEPE_SALT_KEY: str = os.getenv("PHONEPE_SALT_KEY", "96434309-7796-489d-8924-ab56988a6076")
     PHONEPE_SALT_INDEX: str = os.getenv("PHONEPE_SALT_INDEX", "1")
     PHONEPE_CLIENT_ID: str = os.getenv("PHONEPE_CLIENT_ID", "")
     PHONEPE_CLIENT_SECRET: str = os.getenv("PHONEPE_CLIENT_SECRET", "")
@@ -67,7 +69,12 @@ class Settings(BaseSettings):
     PHONEPE_CALLBACK_URL: str = os.getenv("PHONEPE_CALLBACK_URL", "http://127.0.0.1:8000/api/v1/payments/phonepe/webhook")
     
     # Default Merchant UPI ID (editable via Admin Settings CMS)
-    DEFAULT_UPI_ID: str = os.getenv("DEFAULT_UPI_ID", "8885296645@ybl")
+    DEFAULT_UPI_ID: str = os.getenv("DEFAULT_UPI_ID", "9492751073-2@ybl")
+    
+    # Razorpay Payment Gateway Configuration
+    RAZORPAY_KEY_ID: str = os.getenv("RAZORPAY_KEY_ID", "rzp_test_TTgp095ezv3bDy")
+    RAZORPAY_KEY_SECRET: str = os.getenv("RAZORPAY_KEY_SECRET", "Y6Dpw1s7wf6BeT2CKrdCOh5D")
+    RAZORPAY_WEBHOOK_SECRET: str = os.getenv("RAZORPAY_WEBHOOK_SECRET", "")
     
     class Config:
         case_sensitive = True

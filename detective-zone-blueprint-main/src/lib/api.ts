@@ -1,9 +1,20 @@
 // API Client for Detective Zone Backend (Unified Domain Routing)
 
-const API_BASE_URL =
-  typeof import.meta !== "undefined" && import.meta.env && import.meta.env.VITE_API_URL
-    ? import.meta.env.VITE_API_URL
-    : "https://api.detectiveszone.com/api/v1";
+const getApiBaseUrl = () => {
+  if (typeof import.meta !== "undefined" && import.meta.env && import.meta.env.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL;
+  }
+  if (typeof window !== "undefined") {
+    if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
+      return "http://127.0.0.1:8000/api/v1";
+    }
+    return "/api/v1";
+  }
+  // SSR fallback for Node server
+  return "http://127.0.0.1:8000/api/v1";
+};
+
+const API_BASE_URL = getApiBaseUrl();
 
 export function getAuthToken(): string | null {
   if (typeof window === "undefined") return null;
@@ -286,9 +297,29 @@ export const api = {
       qr_payload: string;
       qr_image_url: string;
       payment_url?: string;
+      redirect_url?: string;
       status: string;
       expires_in_seconds: number;
+      payment_created_at?: string;
+      payment_expires_at?: string;
     }>("/payments/create", { method: "POST", body: JSON.stringify(data) }),
+
+  createPhonePePayment: (data: { order_id: number }) =>
+    apiRequest<{
+      success: boolean;
+      merchant_transaction_id: string;
+      order_id: number;
+      order_number: string;
+      amount: number;
+      currency: string;
+      redirect_url?: string;
+      payment_url?: string;
+      redirect_url?: string;
+      status: string;
+      expires_in_seconds: number;
+      payment_created_at?: string;
+      payment_expires_at?: string;
+    }>("/payments/phonepe/create", { method: "POST", body: JSON.stringify(data) }),
 
   getPaymentStatus: (transactionId: string) =>
     apiRequest<{
@@ -297,7 +328,7 @@ export const api = {
       order_number: string;
       amount: number;
       currency: string;
-      payment_status: "PENDING" | "PAID" | "FAILED" | "EXPIRED";
+      payment_status: "PENDING" | "PAID" | "FAILED" | "EXPIRED" | "SUCCESS";
       order_status: string;
       provider: string;
       provider_transaction_id?: string;
@@ -305,6 +336,104 @@ export const api = {
       paid_at?: string;
       message: string;
     }>(`/payments/${transactionId}/status`),
+
+  getOrderPaymentStatus: (orderId: number) =>
+    apiRequest<{
+      order_id: number;
+      order_number: string;
+      order_status: string;
+      payment_status: string;
+      payment_method: string;
+      transaction_id?: string;
+      total_amount: number;
+      currency: string;
+      is_expired: boolean;
+      seconds_remaining: number;
+      expires_at?: string;
+      paid_at?: string;
+    }>(`/orders/${orderId}/payment-status`),
+
+  retryPayment: (orderId: number) =>
+    apiRequest<{
+      merchant_transaction_id: string;
+      order_id: number;
+      order_number: string;
+      amount: number;
+      currency: string;
+      upi_id: string;
+      qr_payload: string;
+      qr_image_url: string;
+      payment_url?: string;
+      redirect_url?: string;
+      status: string;
+      expires_in_seconds: number;
+      payment_created_at?: string;
+      payment_expires_at?: string;
+    }>(`/orders/${orderId}/payment/retry`, { method: "POST" }),
+
+  submitPaymentUtr: (transactionId: string, utrNumber: string) =>
+    apiRequest<{
+      merchant_transaction_id: string;
+      order_id: number;
+      order_number: string;
+      amount: number;
+      currency: string;
+      payment_status: "PENDING" | "PAID" | "FAILED" | "EXPIRED" | "SUCCESS";
+      order_status: string;
+      provider: string;
+      provider_transaction_id?: string;
+      verified_at?: string;
+      paid_at?: string;
+      message: string;
+    }>(`/payments/${transactionId}/submit-utr`, {
+      method: "POST",
+      body: JSON.stringify({ utr_number: utrNumber }),
+    }),
+
+  // Razorpay Gateway API
+  createRazorpayOrder: (orderId: number) =>
+    apiRequest<{
+      success: boolean;
+      key_id: string;
+      order_id: number;
+      order_number: string;
+      razorpay_order_id: string;
+      amount: number;
+      amount_in_paise: number;
+      currency: string;
+      customer_name: string;
+      customer_email: string;
+      customer_phone?: string;
+      payment_url?: string;
+    }>("/payments/razorpay/create-order", {
+      method: "POST",
+      body: JSON.stringify({ order_id: orderId }),
+    }),
+
+  verifyRazorpayPayment: (data: {
+    order_id?: number;
+    razorpay_order_id?: string;
+    razorpay_payment_id: string;
+    razorpay_signature: string;
+    razorpay_payment_link_id?: string;
+    razorpay_payment_link_reference_id?: string;
+    razorpay_payment_link_status?: string;
+  }) =>
+    apiRequest<{
+      success: boolean;
+      order_id: number;
+      order_number: string;
+      payment_status: string;
+      order_status: string;
+      razorpay_payment_id: string;
+      amount: number;
+      customer_name?: string;
+      customer_email?: string;
+      message: string;
+    }>("/payments/razorpay/verify", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
 
   adminReconcilePayment: (transactionId: string, data: { reason: string; action: string; provider_transaction_id?: string }) =>
     apiRequest(`/payments/admin/reconcile/${transactionId}`, { method: "POST", body: JSON.stringify(data) }),

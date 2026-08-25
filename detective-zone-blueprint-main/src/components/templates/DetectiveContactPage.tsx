@@ -20,9 +20,9 @@ import React, { useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import { S3_MEDIA } from "@/lib/media";
 
-/* ================= IMAGES (replace with your own) ================= */
+/* ================= IMAGES ================= */
 const IMAGES = {
-  hero: S3_MEDIA.supportScene,
+  hero: "https://detectives-zone-media.s3.eu-north-1.amazonaws.com/ChatGPT+Image+Aug+25%2C+2026%2C+08_12_23+PM.png",
   support: S3_MEDIA.hqScene,
 };
 
@@ -211,47 +211,51 @@ const METHODS = [
     file: "FILE 01",
     title: "Phone",
     lines: ["+91 63057 29867", "Mon–Sun · 09:00 — 21:00 IST"],
+    href: "tel:+916305729867",
   },
   {
     Icon: IconMail,
     file: "FILE 02",
     title: "Email",
-    lines: ["cases@detectivezone.io", "Reply within 12 hours"],
+    lines: ["cases@detectiveszone.co", "Reply within 12 hours"],
+    href: "mailto:cases@detectiveszone.co",
   },
   {
     Icon: IconInstagram,
     file: "FILE 03",
     title: "Instagram",
-    lines: ["@detective.zone", "DM us with case reports"],
+    lines: ["@detectives_zone", "DM us with case reports & clues"],
+    href: "https://www.instagram.com/detectives_zone?igsi=MTE1c2ppa2JlaHp4aA==",
   },
   {
     Icon: IconFacebook,
     file: "FILE 04",
     title: "Facebook",
-    lines: ["/DetectiveZone", "Follow for case updates"],
+    lines: ["Detectives Zone", "Official investigation dispatches"],
+    href: "https://www.facebook.com/share/1EDd4G6Nva/",
   },
 ];
 
 const FAQS = [
   {
-    q: "Do I need the physical box to play the digital cases?",
-    a: "No. Every case is fully playable online through our interactive Case Dossiers with digital evidence, autopsy reports, suspect interviews, and audio wiretaps. Purchasing a physical Case Kit delivers the deluxe collector's locker, wax-sealed police files, physical fingerprints, and rotating cipher discs for the ultimate real-world investigation experience.",
+    q: "Do I need to order the physical box to solve the case?",
+    a: "Yes. You need to order the physical case box to examine the authentic physical crime scene exhibits, decipher the clues, and solve the mystery.",
   },
   {
-    q: "Will my progress save if I close the browser?",
-    a: "Yes. Your deductions, solved crime scene clues, field notes, and interactive mystery progress are stored automatically in your investigator terminal session, so you can step away from the crime scene and resume your investigation anytime without losing your place.",
+    q: "How much time does it take to solve a case?",
+    a: "Most cases take approximately 2 to 4 hours of intense investigation. You can solve it in a single thrilling game night with family and friends or take your time across multiple sessions.",
   },
   {
-    q: "Is shipping really free, and how long does delivery take?",
-    a: "Yes — 100% Free Express Shipping is included on all Case Kit orders across India. Orders are hand-packed with tamper-evident evidence seals within 24 hours and delivered via BlueDart Express in 3–5 business days with real-time tracking.",
+    q: "Is shipping free, and how long does delivery take?",
+    a: "Free express shipping is included on all prepaid online orders across India. For Cash on Delivery (COD) orders, a standard handling fee of ₹80 applies. Orders are dispatched within 24 hours via express courier with real-time tracking (3–5 business days delivery).",
   },
   {
-    q: "How does the challenge discount work at checkout?",
-    a: "Solve all three mysteries in the Room 104 Crime Scene Challenge to unlock the classified promo code DZ25-SOLVED for 25% OFF. Enter the code in your cart or checkout page, and the discount will apply instantly to your total order amount.",
+    q: "How many items will be included in the box?",
+    a: "Each Case Kit box includes 15 to 25 authentic physical crime scene exhibits: classified police dossiers, autopsy & forensic reports, crime scene photographs, witness statements, sealed evidence bags, suspect ciphers, and exclusive physical artifacts needed to crack the mystery.",
   },
   {
     q: "Can I replay a case after solving it?",
-    a: "Absolutely! Once closed, case files remain accessible in your Evidence Locker forever. You can re-examine crime scene photographs, re-read suspect transcripts, or pass the physical evidence dossier to friends and family for mystery game nights.",
+    a: "Absolutely! Once solved, you can pass the physical evidence dossier, evidence bags, and case files to your friends and family for their own mystery investigation game nights.",
   },
 ];
 
@@ -506,29 +510,32 @@ const CSS = `
 .dz-cardline{margin-top:14px;height:1px;width:40px;background:var(--red);transition:width .6s var(--ease);}
 .dz-card:hover .dz-cardline{width:82px;}
 
-.dz-split{display:grid;gap:24px;padding:clamp(72px,10vw,120px) 24px;max-width:1440px;margin:0 auto;}
+.dz-split{display:grid;gap:24px;padding:clamp(40px,6vw,96px) 16px;max-width:1440px;margin:0 auto;}
+@media(min-width:640px){.dz-split{padding:clamp(56px,8vw,110px) 24px;}}
 @media(min-width:1024px){.dz-split{grid-template-columns:58fr 42fr;gap:40px;padding:clamp(72px,10vw,120px) 48px;}}
 
 /* form */
 .dz-field{
-  width:100%;border:1px solid var(--input);background:rgba(7,7,7,.65);
-  padding:14px 16px;font-size:14px;outline:none;border-radius:3px;
+  width:100%;border:1px solid var(--input);background:rgba(10,10,10,.85);
+  padding:13px 16px;font-size:14px;outline:none;border-radius:8px;
+  color:#f4f3f0;
   transition:border-color .4s var(--ease),background-color .4s var(--ease),box-shadow .4s var(--ease);
 }
 .dz-field::placeholder{color:rgba(150,148,143,.55);}
 .dz-field:focus{
   border-color:var(--red);background:#050505;
-  box-shadow:0 0 0 1px var(--red),0 0 0 6px rgba(193,24,24,.12);
+  box-shadow:0 0 0 1px var(--red),0 0 0 5px rgba(193,24,24,.15);
 }
-.dz-label{display:block;font-family:var(--mfont);font-size:10px;text-transform:uppercase;letter-spacing:.26em;color:var(--muted);margin-bottom:9px;}
-.dz-formgrid{display:grid;gap:22px;}
-@media(min-width:640px){.dz-formgrid{grid-template-columns:1fr 1fr;}}
+.dz-label{display:block;font-family:var(--mfont);font-size:10px;text-transform:uppercase;letter-spacing:.24em;color:var(--muted);margin-bottom:8px;}
+.dz-formgrid{display:grid;gap:16px;}
+@media(min-width:640px){.dz-formgrid{grid-template-columns:1fr 1fr;gap:20px;}}
 .dz-selwrap{position:relative;}
+.dz-selwrap select{cursor:pointer;}
 .dz-selwrap svg{position:absolute;right:16px;top:50%;transform:translateY(-50%);pointer-events:none;color:var(--muted);}
-.dz-dl{margin-top:36px;display:grid;gap:1px;background:var(--line);}
-.dz-dl>div{display:flex;align-items:baseline;justify-content:space-between;gap:16px;background:var(--panel2);padding:15px 18px;}
+.dz-dl{margin-top:28px;display:grid;gap:1px;background:var(--line);border-radius:8px;overflow:hidden;border:1px solid var(--line);}
+.dz-dl>div{display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--panel2);padding:14px 16px;}
 .dz-dt{font-family:var(--mfont);font-size:9.5px;text-transform:uppercase;letter-spacing:.22em;color:var(--muted);}
-.dz-dd{font-family:var(--condensed);font-size:14px;letter-spacing:.08em;text-align:right;}
+.dz-dd{font-family:var(--condensed);font-size:13.5px;letter-spacing:.06em;text-align:right;color:#fff;}
 
 /* faq */
 .dz-faqgrid{display:grid;gap:56px;}
@@ -702,27 +709,31 @@ export default function DetectiveContactPage({ embedded = false }: { embedded?: 
     list: [
       {
         file: "FILE // 001",
-        Icon: IconMail,
-        title: "Encrypted Dispatch",
-        lines: ["investigations@detectivezone.com", "Average response: under 2 hours", "PGP Key ID: 0x8F3A29B1"],
+        Icon: IconInstagram,
+        title: "Instagram HQ",
+        lines: ["@detectives_zone", "DM us with case reports & clues", "Instant community updates"],
+        href: "https://www.instagram.com/detectives_zone?igsi=MTE1c2ppa2JlaHp4aA==",
       },
       {
         file: "FILE // 002",
-        Icon: IconPhone,
-        title: "Secure Line",
-        lines: ["+91 63057 29867", "Mon–Sun · 09:00 — 21:00 IST", "Direct line, priority response"],
+        Icon: IconFacebook,
+        title: "Facebook Desk",
+        lines: ["Detectives Zone", "Case file dispatches & community", "Official investigation notices"],
+        href: "https://www.facebook.com/share/1EDd4G6Nva/",
       },
       {
         file: "FILE // 003",
-        Icon: IconPin,
-        title: "Field Headquarters",
-        lines: ["221B Baker St. Complex", "Suite 404, New York, NY 10001", "By appointment or priority case only"],
+        Icon: IconPhone,
+        title: "Secure Line",
+        lines: ["+91 63057 29867", "Mon–Sun · 09:00 — 21:00 IST", "Direct line, priority response"],
+        href: "tel:+916305729867",
       },
       {
         file: "FILE // 004",
-        Icon: IconClock,
-        title: "Urgent Deadlines",
-        lines: ["case-alert@detectivezone.com", "24/7 on-call dispatch desk", "Immediate field routing"],
+        Icon: IconMail,
+        title: "Encrypted Dispatch",
+        lines: ["cases@detectiveszone.co", "Average response: under 2 hours", "Central dispatch routing"],
+        href: "mailto:cases@detectiveszone.co",
       },
     ],
   });
@@ -958,32 +969,27 @@ export default function DetectiveContactPage({ embedded = false }: { embedded?: 
         <section className="dz-hero">
           <div className="dz-wrap dz-herogrid">
             <div className="dz-fadein" style={{ position: "relative", zIndex: 20 }}>
-              <div className="dz-eyebrow">
-                <span className="dz-rule" />
-                <span className="dz-kicker">Get in touch</span>
+              <div className="dz-eyebrow" style={{ alignItems: "center", gap: 12 }}>
+                <span className="dz-rule" style={{ width: 28, height: 2, background: "var(--red)" }} />
+                <span className="dz-kicker" style={{ fontSize: 11, letterSpacing: ".32em", color: "#d6d6d6", fontWeight: 600 }}>GET IN TOUCH</span>
+                <span className="dz-dot" style={{ width: 6, height: 6, background: "var(--red)", borderRadius: "50%", boxShadow: "0 0 8px var(--red)" }} />
                 <span style={{ height: 1, flex: 1, background: "var(--line)" }} />
               </div>
 
-              <h1 className="dz-h1">
-                Contact the
-                <br />
-                <span className="dz-red">Investigation</span>
-                <br />
-                Team
+              <h1 className="dz-h1" style={{ fontSize: "clamp(3.2rem, 7.5vw, 5.2rem)", lineHeight: 0.88, letterSpacing: "0.01em", marginTop: 24 }}>
+                <span style={{ display: "block", color: "#ffffff" }}>CONTACT THE</span>
+                <span style={{ display: "block", color: "var(--red)" }}>INVESTIGATION</span>
+                <span style={{ display: "block", color: "#ffffff" }}>TEAM</span>
               </h1>
+              <div style={{ marginTop: 18, width: 56, height: 2, background: "var(--red)" }} />
 
-              <p className="dz-lead">
+              <p className="dz-lead" style={{ marginTop: 24 }}>
                 Every investigation starts with a conversation. Whether you&apos;re reporting a
                 clue, requesting assistance, or exploring partnership opportunities, our detectives
                 are ready to respond.
               </p>
 
-              <div className="dz-ctas">
-                <a href="#case-form">
-                  <MagneticButton full icon={<IconArrow size={13} />}>
-                    Open Investigation
-                  </MagneticButton>
-                </a>
+              <div className="dz-ctas" style={{ marginTop: 28 }}>
                 <a href="#faq">
                   <MagneticButton variant="ghost" full icon={<IconLife size={13} />}>
                     Support Center
@@ -1037,44 +1043,61 @@ export default function DetectiveContactPage({ embedded = false }: { embedded?: 
               accent={channelsData.accent}
             />
             <div className="dz-grid4">
-              {channelsData.list.map((m, i) => (
-                <Reveal key={m.title} delay={i * 90}>
-                  <div className="dz-shell">
-                    <div className="dz-core dz-card">
-                      <div
+              {channelsData.list.map((m: any, i: number) => {
+                const CardInner = (
+                  <div className="dz-core dz-card cursor-pointer">
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "flex-start",
+                      }}
+                    >
+                      <div className="dz-cardtile">
+                        <m.Icon size={20} />
+                      </div>
+                      <span
+                        className="dz-mono"
                         style={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                          alignItems: "flex-start",
+                          fontSize: 10,
+                          letterSpacing: ".28em",
+                          color: "rgba(150,148,143,.7)",
                         }}
                       >
-                        <div className="dz-cardtile">
-                          <m.Icon size={20} />
-                        </div>
-                        <span
-                          className="dz-mono"
-                          style={{
-                            fontSize: 10,
-                            letterSpacing: ".28em",
-                            color: "rgba(150,148,143,.7)",
-                          }}
-                        >
-                          {m.file}
-                        </span>
-                      </div>
-                      <h3>{m.title}</h3>
-                      <div className="dz-cardline" />
-                      <div style={{ marginTop: 16, display: "grid", gap: 4 }}>
-                        {m.lines.map((l) => (
-                          <p key={l} style={{ fontSize: 14, color: "var(--muted)" }}>
-                            {l}
-                          </p>
-                        ))}
-                      </div>
+                        {m.file}
+                      </span>
+                    </div>
+                    <h3>{m.title}</h3>
+                    <div className="dz-cardline" />
+                    <div style={{ marginTop: 16, display: "grid", gap: 4 }}>
+                      {m.lines.map((l: string) => (
+                        <p key={l} style={{ fontSize: 14, color: "var(--muted)" }}>
+                          {l}
+                        </p>
+                      ))}
                     </div>
                   </div>
-                </Reveal>
-              ))}
+                );
+
+                return (
+                  <Reveal key={m.title} delay={i * 90}>
+                    <div className="dz-shell">
+                      {m.href ? (
+                        <a
+                          href={m.href}
+                          target={m.href.startsWith("http") ? "_blank" : undefined}
+                          rel={m.href.startsWith("http") ? "noopener noreferrer" : undefined}
+                          style={{ textDecoration: "none", color: "inherit", display: "block", height: "100%" }}
+                        >
+                          {CardInner}
+                        </a>
+                      ) : (
+                        CardInner
+                      )}
+                    </div>
+                  </Reveal>
+                );
+              })}
             </div>
           </div>
         </section>
@@ -1088,28 +1111,28 @@ export default function DetectiveContactPage({ embedded = false }: { embedded?: 
                 <span className="dz-tick dz-tick--bl" />
                 <div
                   className="dz-core dz-grain"
-                  style={{ padding: "clamp(28px,4vw,48px)", height: "100%" }}
+                  style={{ padding: "clamp(20px, 4.5vw, 44px)", height: "100%" }}
                 >
-                  <div className="dz-eyebrow">
-                    <span className="dz-rule" />
-                    <span className="dz-kicker">{formConfig.kicker}</span>
+                  <div className="dz-eyebrow" style={{ gap: 10, alignItems: "center" }}>
+                    <span className="dz-rule" style={{ width: 20 }} />
+                    <span className="dz-kicker" style={{ fontSize: 10, letterSpacing: ".26em" }}>{formConfig.kicker}</span>
                   </div>
-                  <h2 style={{ marginTop: 26, fontSize: "clamp(2.8rem,5vw,4rem)" }}>
+                  <h2 style={{ marginTop: 20, fontSize: "clamp(2.2rem, 6vw, 3.6rem)", lineHeight: 0.95 }}>
                     {formConfig.title} <span className="dz-red">{formConfig.accent}</span>
                   </h2>
                   <p
                     style={{
-                      marginTop: 16,
+                      marginTop: 12,
                       maxWidth: "28rem",
-                      fontSize: 14,
-                      lineHeight: 1.75,
+                      fontSize: 13.5,
+                      lineHeight: 1.65,
                       color: "var(--muted)",
                     }}
                   >
                     {formConfig.description}
                   </p>
 
-                  <form onSubmit={onCaseSubmit} style={{ marginTop: 44, display: "grid", gap: 22 }}>
+                  <form onSubmit={onCaseSubmit} style={{ marginTop: 32, display: "grid", gap: 18 }}>
                     <div className="dz-formgrid">
                       <label>
                         <span className="dz-label">Name</span>
@@ -1137,7 +1160,7 @@ export default function DetectiveContactPage({ embedded = false }: { embedded?: 
                         <input
                           name="phone"
                           maxLength={40}
-                          placeholder="+1 000 000 0000"
+                          placeholder="+91 00000 00000"
                           className="dz-field"
                         />
                       </label>
@@ -1176,37 +1199,36 @@ export default function DetectiveContactPage({ embedded = false }: { embedded?: 
                       <textarea
                         required
                         name="message"
-                        rows={6}
+                        rows={5}
                         maxLength={1000}
                         placeholder="Describe the clue, request or inquiry in detail…"
                         className="dz-field"
-                        style={{ resize: "none", lineHeight: 1.75 }}
+                        style={{ resize: "none", lineHeight: 1.6, minHeight: 120 }}
                       />
                     </label>
 
                     <div
                       style={{
                         display: "flex",
-                        flexWrap: "wrap",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        gap: 24,
+                        flexDirection: "column",
+                        gap: 16,
                         paddingTop: 8,
                       }}
                     >
-                      <MagneticButton type="submit" icon={<IconSend size={16} />}>
+                      <MagneticButton full type="submit" icon={<IconSend size={15} />}>
                         {submitting ? "Filing…" : "Submit Investigation"}
                       </MagneticButton>
                       <p
                         style={{
                           display: "flex",
                           alignItems: "center",
+                          justifyContent: "center",
                           gap: 8,
-                          fontSize: 12,
+                          fontSize: 11.5,
                           color: "var(--muted)",
                         }}
                       >
-                        <IconShield size={16} className="dz-red" /> Encrypted · Detective eyes only
+                        <IconShield size={14} className="dz-red" /> Encrypted · Detective eyes only
                       </p>
                     </div>
                   </form>
@@ -1225,13 +1247,14 @@ export default function DetectiveContactPage({ embedded = false }: { embedded?: 
                     display: "flex",
                     flexDirection: "column",
                     background: "var(--panel2)",
+                    overflow: "hidden",
                   }}
                 >
                   <div
                     className="dz-grain"
                     style={{
                       position: "relative",
-                      aspectRatio: "16 / 10",
+                      aspectRatio: "16 / 9",
                       overflow: "hidden",
                       borderBottom: "1px solid var(--line)",
                     }}
@@ -1251,17 +1274,17 @@ export default function DetectiveContactPage({ embedded = false }: { embedded?: 
                       display: "flex",
                       flex: 1,
                       flexDirection: "column",
-                      padding: "clamp(24px,3vw,36px)",
+                      padding: "clamp(20px, 4vw, 32px)",
                     }}
                   >
-                    <h3 style={{ fontSize: 28 }}>
+                    <h3 style={{ fontSize: "clamp(22px, 5vw, 28px)" }}>
                       Live <span className="dz-red">assistance</span>
                     </h3>
                     <p
                       style={{
-                        marginTop: 14,
-                        fontSize: 14,
-                        lineHeight: 1.75,
+                        marginTop: 10,
+                        fontSize: 13.5,
+                        lineHeight: 1.65,
                         color: "var(--muted)",
                       }}
                     >
@@ -1273,7 +1296,7 @@ export default function DetectiveContactPage({ embedded = false }: { embedded?: 
                       {[
                         ["Response time", "Under 12 hours"],
                         ["Live status", "Desk open · 3 detectives"],
-                        ["Support email", "support@detectivezone.io"],
+                        ["Support email", "cases@detectiveszone.co"],
                         ["Priority line", "+91 63057 29867"],
                       ].map(([k, v]) => (
                         <div key={k}>
@@ -1285,10 +1308,45 @@ export default function DetectiveContactPage({ embedded = false }: { embedded?: 
                       ))}
                     </dl>
 
-                    <div style={{ marginTop: "auto", paddingTop: 36 }}>
-                      <MagneticButton variant="ghost" full icon={<IconChat size={16} />}>
-                        Start Live Chat
-                      </MagneticButton>
+                    <div style={{ marginTop: "auto", paddingTop: 24, display: "grid", gap: 10 }}>
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                        <a
+                          href="https://www.instagram.com/detectives_zone?igsi=MTE1c2ppa2JlaHp4aA=="
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{ textDecoration: "none" }}
+                        >
+                          <button
+                            type="button"
+                            className="dz-btn dz-btn--ghost"
+                            style={{ width: "100%", padding: "11px 12px", fontSize: 11, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, borderRadius: 6 }}
+                          >
+                            <IconInstagram size={14} className="dz-red" />
+                            <span>Instagram</span>
+                          </button>
+                        </a>
+                        <a
+                          href="https://www.facebook.com/share/1EDd4G6Nva/"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{ textDecoration: "none" }}
+                        >
+                          <button
+                            type="button"
+                            className="dz-btn dz-btn--ghost"
+                            style={{ width: "100%", padding: "11px 12px", fontSize: 11, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, borderRadius: 6 }}
+                          >
+                            <IconFacebook size={14} className="dz-red" />
+                            <span>Facebook</span>
+                          </button>
+                        </a>
+                      </div>
+
+                      <a href="https://wa.me/916305729867" target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none" }}>
+                        <MagneticButton variant="ghost" full icon={<IconChat size={16} />}>
+                          Start WhatsApp Wire
+                        </MagneticButton>
+                      </a>
                     </div>
                   </div>
                 </div>

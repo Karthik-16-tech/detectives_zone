@@ -258,7 +258,7 @@ function OrderDetailsPage() {
                 <span className="text-white">{order.shipping_fee === 0 ? "FREE" : `₹${order.shipping_fee}`}</span>
               </div>
               <div className="flex justify-between pt-2 border-t border-white/10 font-bold text-sm text-white">
-                <span>Total Amount Paid</span>
+                <span>{order.payment_method === "COD" ? "Total Payable (On Delivery)" : "Total Amount"}</span>
                 <span className="text-blood font-display text-base">₹{order.total_amount?.toLocaleString()}</span>
               </div>
             </div>
@@ -280,9 +280,16 @@ function OrderDetailsPage() {
               <span className="text-[10px] uppercase tracking-wider text-white/50 block mb-1">
                 Payment Information
               </span>
-              <p className="text-white"><span className="text-white/50">Method:</span> {order.payment_method}</p>
-              <p className="text-white"><span className="text-white/50">Status:</span> <span className="text-emerald-400 font-bold">Confirmed</span></p>
-              <p className="text-white/40 text-[10px] truncate mt-1">Txn: {order.transaction_id || "VERIFIED"}</p>
+              <p className="text-white"><span className="text-white/50">Method:</span> {order.payment_method === "COD" ? "Cash on Delivery" : order.payment_method}</p>
+              <p className="text-white">
+                <span className="text-white/50">Status:</span>{" "}
+                <span className={`font-bold ${order.payment_method === "COD" && order.payment_status !== "SUCCESS" ? "text-amber-400" : "text-emerald-400"}`}>
+                  {order.payment_method === "COD" && order.payment_status !== "SUCCESS" ? "Pay on Delivery" : "Confirmed"}
+                </span>
+              </p>
+              {order.payment_method !== "COD" && (
+                <p className="text-white/40 text-[10px] truncate mt-1">Txn: {order.transaction_id || "VERIFIED"}</p>
+              )}
             </div>
           </div>
         </div>

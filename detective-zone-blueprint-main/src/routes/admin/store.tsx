@@ -29,12 +29,14 @@ function AdminStore() {
   const [editingProduct, setEditingProduct] = useState<any | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
     name: "",
     slug: "",
-    price: 39.0,
+    price: 999,
     sale_price: "",
+    shipping_fee: 0,
     sku: "",
     category: "Physical Case Kits",
     stock_quantity: 20,
@@ -47,6 +49,11 @@ function AdminStore() {
   useEffect(() => {
     loadProducts();
   }, []);
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 3500);
+  };
 
   const loadProducts = async () => {
     try {
@@ -65,8 +72,9 @@ function AdminStore() {
     setFormData({
       name: "",
       slug: "",
-      price: 39.0,
+      price: 999,
       sale_price: "",
+      shipping_fee: 0,
       sku: `DZ-KIT-${Math.floor(100 + Math.random() * 900)}`,
       category: "Physical Case Kits",
       stock_quantity: 20,
@@ -75,6 +83,7 @@ function AdminStore() {
       full_description: "",
       availability_status: "available",
     });
+    setError(null);
     setShowModal(true);
   };
 
@@ -84,7 +93,8 @@ function AdminStore() {
       name: p.name,
       slug: p.slug,
       price: p.price,
-      sale_price: p.sale_price ? String(p.sale_price) : "",
+      sale_price: p.sale_price !== null && p.sale_price !== undefined ? String(p.sale_price) : "",
+      shipping_fee: p.shipping_fee !== null && p.shipping_fee !== undefined ? Number(p.shipping_fee) : 0,
       sku: p.sku || "",
       category: p.category || "Physical Case Kits",
       stock_quantity: p.stock_quantity ?? 10,
@@ -93,6 +103,7 @@ function AdminStore() {
       full_description: p.full_description || "",
       availability_status: p.availability_status || "available",
     });
+    setError(null);
     setShowModal(true);
   };
 
@@ -101,6 +112,7 @@ function AdminStore() {
     try {
       await api.deleteProduct(id);
       setProducts(products.filter((p) => p.id !== id));
+      showToast(`Product "${name}" deleted successfully.`);
     } catch (err: any) {
       alert(err.message || "Failed to delete product");
     }
@@ -111,19 +123,26 @@ function AdminStore() {
     setSubmitting(true);
     setError(null);
     try {
+      const parsedPrice = isNaN(Number(formData.price)) ? 999 : Number(formData.price);
+      const parsedSalePrice = formData.sale_price !== "" && formData.sale_price !== null && !isNaN(Number(formData.sale_price))
+        ? Number(formData.sale_price)
+        : null;
+
       const payload: any = {
         ...formData,
-        price: Number(formData.price),
-        sale_price: formData.sale_price ? Number(formData.sale_price) : null,
-        stock_quantity: Number(formData.stock_quantity),
+        price: parsedPrice,
+        sale_price: parsedSalePrice,
+        stock_quantity: isNaN(Number(formData.stock_quantity)) ? 10 : Number(formData.stock_quantity),
       };
 
       if (editingProduct) {
         const updated = await api.updateProduct(editingProduct.id, payload);
         setProducts(products.map((p) => (p.id === editingProduct.id ? updated : p)));
+        showToast(`✓ "${updated.name}" updated (₹${updated.price}) — Live across store & case cards!`);
       } else {
         const created = await api.createProduct(payload);
         setProducts([created, ...products]);
+        showToast(`✓ New product "${created.name}" created successfully!`);
       }
       setShowModal(false);
     } catch (err: any) {
@@ -152,6 +171,13 @@ function AdminStore() {
         </button>
       }
     >
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2.5 rounded-xl border border-emerald-500/40 bg-[#080808]/95 px-5 py-3 font-mono text-xs text-emerald-400 shadow-[0_12px_40px_rgba(0,0,0,0.8)] backdrop-blur-md animate-in fade-in">
+          <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
+          <span>{toastMessage}</span>
+        </div>
+      )}
       {/* Search Bar */}
       <div className="mb-6 flex items-center justify-between gap-4">
         <div className="relative max-w-md w-full">
@@ -326,37 +352,63 @@ function AdminStore() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div>
-                  <label className="block uppercase tracking-wider text-white/60 mb-1">Regular Price ($) *</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    required
-                    value={formData.price}
-                    onChange={(e) => setFormData({ ...formData, price: Number(e.target.value) })}
-                    className="w-full rounded-lg border border-white/10 bg-black/60 px-3.5 py-2.5 text-white focus:border-blood outline-none"
-                  />
+              {/* Pricing & Inventory Box */}
+              <div className="rounded-xl border border-blood/30 bg-blood/[0.04] p-4 space-y-3">
+                <div className="flex items-center justify-between border-b border-blood/20 pb-2">
+                  <span className="text-[10px] uppercase font-bold tracking-wider text-blood">
+                    💳 Pricing & Inventory Control
+                  </span>
+                  <span className="text-[10px] text-white/70">
+                    Active Rate: <b className="text-white">₹{formData.sale_price !== "" && formData.sale_price !== null && !isNaN(Number(formData.sale_price)) ? Number(formData.sale_price) : Number(formData.price) || 0}</b>
+                    {formData.sale_price && Number(formData.sale_price) < Number(formData.price) && (
+                      <span className="text-emerald-400 font-bold ml-1.5 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded">
+                        {Math.round(((Number(formData.price) - Number(formData.sale_price)) / Number(formData.price)) * 100)}% OFF
+                      </span>
+                    )}
+                  </span>
                 </div>
-                <div>
-                  <label className="block uppercase tracking-wider text-white/60 mb-1">Sale Price ($)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={formData.sale_price}
-                    onChange={(e) => setFormData({ ...formData, sale_price: e.target.value })}
-                    placeholder="Leave blank if none"
-                    className="w-full rounded-lg border border-white/10 bg-black/60 px-3.5 py-2.5 text-white focus:border-blood outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block uppercase tracking-wider text-white/60 mb-1">Stock Quantity</label>
-                  <input
-                    type="number"
-                    value={formData.stock_quantity}
-                    onChange={(e) => setFormData({ ...formData, stock_quantity: Number(e.target.value) })}
-                    className="w-full rounded-lg border border-white/10 bg-black/60 px-3.5 py-2.5 text-white focus:border-blood outline-none"
-                  />
+
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                  <div>
+                    <label className="block uppercase tracking-wider text-white/60 mb-1 text-[10px]">Regular Price (₹) *</label>
+                    <input
+                      type="number"
+                      required
+                      value={formData.price}
+                      onChange={(e) => setFormData({ ...formData, price: Number(e.target.value) })}
+                      placeholder="1500"
+                      className="w-full rounded-lg border border-white/10 bg-black/60 px-3 py-2 text-white focus:border-blood outline-none font-bold text-xs"
+                    />
+                  </div>
+                  <div>
+                    <label className="block uppercase tracking-wider text-blood font-bold mb-1 text-[10px]">Sale Price (₹)</label>
+                    <input
+                      type="number"
+                      value={formData.sale_price}
+                      onChange={(e) => setFormData({ ...formData, sale_price: e.target.value })}
+                      placeholder="999 (Discount)"
+                      className="w-full rounded-lg border border-blood/30 bg-black/80 px-3 py-2 text-white focus:border-blood outline-none font-bold text-xs"
+                    />
+                  </div>
+                  <div>
+                    <label className="block uppercase tracking-wider text-emerald-400 font-bold mb-1 text-[10px]">Shipping Fee (₹)</label>
+                    <input
+                      type="number"
+                      value={formData.shipping_fee ?? 0}
+                      onChange={(e) => setFormData({ ...formData, shipping_fee: Number(e.target.value) })}
+                      placeholder="0 = Free"
+                      className="w-full rounded-lg border border-white/10 bg-black/60 px-3 py-2 text-white focus:border-blood outline-none font-bold text-xs"
+                    />
+                  </div>
+                  <div>
+                    <label className="block uppercase tracking-wider text-white/60 mb-1 text-[10px]">Stock Qty</label>
+                    <input
+                      type="number"
+                      value={formData.stock_quantity}
+                      onChange={(e) => setFormData({ ...formData, stock_quantity: Number(e.target.value) })}
+                      className="w-full rounded-lg border border-white/10 bg-black/60 px-3 py-2 text-white focus:border-blood outline-none text-xs"
+                    />
+                  </div>
                 </div>
               </div>
 

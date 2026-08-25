@@ -1,7 +1,8 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowLeft, Star, Lock } from "lucide-react";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { ArrowLeft, ArrowRight, Star, Lock, ShoppingBag } from "lucide-react";
 import { useState, useEffect } from "react";
 import { api } from "@/lib/api";
+import { useCart } from "@/context/CartContext";
 
 import { S3_MEDIA } from "@/lib/media";
 
@@ -28,7 +29,7 @@ import { EvidenceWall, type EvidencePin } from "@/components/templates/evidence-
 import { HeroVideoCard } from "@/components/templates/hero-video-card";
 import { InvestigationModules } from "@/components/templates/investigation-modules";
 import { QuoteBanner } from "@/components/templates/quote-banner";
-const case001Video = S3_MEDIA.heroVideo;
+const case001Video = S3_MEDIA.case001Video;
 
 export const Route = createFileRoute("/cases/$caseId")({
   component: CaseDetailPage,
@@ -47,6 +48,9 @@ type CaseFile = {
   caseType: string;
   dateOfIncident: string;
   location: string;
+  price?: number;
+  originalPrice?: number;
+  shippingFee?: number;
   pins: EvidencePin[];
   links: [number, number][];
 };
@@ -65,6 +69,9 @@ const caseFiles: Record<string, CaseFile> = {
     caseType: "Homicide",
     dateOfIncident: "15 July 2027",
     location: "Varma Residence",
+    price: 1199,
+    originalPrice: 1501,
+    shippingFee: 0,
     pins: [
       {
         id: "vm",
@@ -137,6 +144,9 @@ const caseFiles: Record<string, CaseFile> = {
     caseType: "Locked Room",
     dateOfIncident: "22 June 2027",
     location: "Morrow House",
+    price: 1450,
+    originalPrice: 1899,
+    shippingFee: 0,
     pins: [
       {
         id: "mss",
@@ -209,6 +219,9 @@ const caseFiles: Record<string, CaseFile> = {
     caseType: "Classified",
     dateOfIncident: "TBD",
     location: "Redacted",
+    price: 899,
+    originalPrice: 1399,
+    shippingFee: 0,
     pins: [
       {
         id: "letter",
@@ -263,6 +276,9 @@ const caseFiles: Record<string, CaseFile> = {
     caseType: "Classified",
     dateOfIncident: "TBD",
     location: "Redacted",
+    price: 999,
+    originalPrice: 1499,
+    shippingFee: 0,
     pins: [
       { id: "bed", x: 16, y: 22, label: "Bed", note: "Unmade. Clothes still in the wardrobe." },
       { id: "keys", x: 44, y: 14, label: "Car Keys", note: "Left on the table. Engine cold." },
@@ -293,6 +309,9 @@ const caseFiles: Record<string, CaseFile> = {
     caseType: "Classified",
     dateOfIncident: "TBD",
     location: "Redacted",
+    price: 999,
+    originalPrice: 1499,
+    shippingFee: 0,
     pins: [
       { id: "vial", x: 16, y: 22, label: "Vial", note: "Label torn. A drop missing." },
       { id: "log", x: 44, y: 14, label: "Lab Log", note: "Stops mid-sentence. Ink smudged." },
@@ -322,6 +341,9 @@ const caseFiles: Record<string, CaseFile> = {
     caseType: "Classified",
     dateOfIncident: "TBD",
     location: "Redacted",
+    price: 999,
+    originalPrice: 1499,
+    shippingFee: 0,
     pins: [
       { id: "letter", x: 16, y: 22, label: "Letter", note: "Unsigned. A name crossed out." },
       {
@@ -349,25 +371,55 @@ const caseFiles: Record<string, CaseFile> = {
 
 function CaseDetailPage() {
   const { caseId } = Route.useParams();
+  const navigate = useNavigate();
+  const { addToCart } = useCart();
   const initialFile = caseFiles[caseId] || caseFiles["001"];
   const [file, setFile] = useState<CaseFile>(initialFile);
+  const [caseData, setCaseData] = useState<any>(null);
   const [pageData, setPageData] = useState<any>(null);
 
+  const handleBuyNow = () => {
+    addToCart({
+      id: file.id,
+      title: file.title,
+      caseNumber: `CASE ${file.id}`,
+      price: file.price ?? 999,
+      shippingFee: file.shippingFee ?? 0,
+      image: file.image,
+      type: "Official Case Dossier Box",
+    });
+    navigate({ to: "/cart" });
+  };
+
   useEffect(() => {
+    const cleanNum = caseId.replace(/^CASE\s*#?/i, "").trim();
+    const prodSlug = cleanNum.startsWith("p") ? cleanNum : `p${parseInt(cleanNum) || 1}`;
+
     Promise.all([
       api.getCase(caseId).catch(() => null),
       api.getCasePage(caseId).catch(() => null),
-    ]).then(([cData, pData]) => {
-      if (cData) {
+      api.getProduct(prodSlug).catch(() => null),
+    ]).then(([cData, pData, prodData]) => {
+      if (cData || prodData) {
+        const activePrice = cData?.price != null 
+          ? Number(cData.price) 
+          : (prodData?.sale_price ? Number(prodData.sale_price) : (prodData?.price != null ? Number(prodData.price) : null));
+
+        if (cData) setCaseData(cData);
         setFile((prev) => ({
           ...prev,
-          title: cData.title || prev.title,
-          description: cData.short_description || cData.intro_text || prev.description,
-          status: (cData.status as any) || prev.status,
-          difficulty: cData.difficulty || prev.difficulty,
-          duration: cData.estimated_duration || prev.duration,
-          stars: cData.rating ? Math.round(cData.rating) : prev.stars,
-          image: cData.cover_image || prev.image,
+          title: cData?.title || (prodData?.name ? prodData.name.split(" — ")[0].split(" - ")[0] : prev.title),
+          description: cData?.short_description || cData?.intro_text || prodData?.short_description || prev.description,
+          status: (cData?.status as any) || prev.status,
+          difficulty: cData?.difficulty || prev.difficulty,
+          duration: cData?.estimated_duration || prev.duration,
+          stars: cData?.rating ? Math.round(cData.rating) : prev.stars,
+          image: (cData?.cover_image && !cData.cover_image.startsWith("/src")) 
+            ? cData.cover_image 
+            : (prodData?.cover_image && !prodData.cover_image.startsWith("/src") ? prodData.cover_image : prev.image),
+          price: activePrice != null ? activePrice : prev.price,
+          originalPrice: cData?.original_price != null ? Number(cData.original_price) : prev.originalPrice,
+          shippingFee: cData?.shipping_fee != null ? Number(cData.shipping_fee) : prev.shippingFee,
         }));
       }
 
@@ -484,9 +536,44 @@ function CaseDetailPage() {
             >
               {file.title}
             </h1>
-            <p className="text-[12px] text-[#A0A0A0] font-mono tracking-[1.5px] uppercase mb-6">
+            <p className="text-[12px] text-[#A0A0A0] font-mono tracking-[1.5px] uppercase mb-4">
               Evidence wall — connect the dots
             </p>
+
+            {/* Left-Aligned Premium Rate & Buy Now Action */}
+            {(() => {
+              const currentPrice = file.price ?? 999;
+              const origPrice = file.originalPrice ?? 1499;
+              const discountPct = Math.max(0, Math.round(((origPrice - currentPrice) / origPrice) * 100));
+
+              return (
+                <div className="flex flex-wrap items-center gap-5 my-6 p-4 rounded-xl border border-white/10 bg-gradient-to-r from-[#120505] via-[#0d0707] to-[#080808] shadow-[0_8px_30px_rgba(0,0,0,0.8),inset_0_1px_1px_rgba(255,255,255,0.06)]">
+                  <div className="flex flex-col">
+                    <span className="font-mono text-[9px] uppercase tracking-[0.24em] text-[#9A9A9A]">Official Case Dossier</span>
+                    <div className="flex items-baseline gap-2 mt-0.5">
+                      <span className="font-mono text-[22px] font-bold text-white tracking-wider">₹{currentPrice}</span>
+                      <span className="font-mono text-[13px] text-white/35 line-through">₹{origPrice}</span>
+                      {discountPct > 0 && (
+                        <span className="font-mono text-[9px] font-bold uppercase tracking-wider text-[#4ade80] bg-[#4ade80]/10 border border-[#4ade80]/20 px-2 py-0.5 rounded-[4px]">
+                          {discountPct}% OFF
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={handleBuyNow}
+                    className="group relative inline-flex items-center gap-2.5 overflow-hidden rounded-[8px] border border-[#D32F2F] bg-gradient-to-r from-[#D32F2F] via-[#C62828] to-[#9A0007] px-6 py-3 font-mono text-[11.5px] font-bold uppercase tracking-[0.22em] text-white shadow-[0_0_24px_rgba(211,47,47,0.45),inset_0_1px_1px_rgba(255,255,255,0.35)] transition-all duration-300 hover:shadow-[0_0_36px_rgba(211,47,47,0.7)] hover:scale-[1.03] active:scale-[0.98] cursor-pointer"
+                  >
+                    {/* Smooth light sweep shimmer */}
+                    <span className="pointer-events-none absolute inset-0 -translate-x-full group-hover:translate-x-full bg-gradient-to-r from-transparent via-white/30 to-transparent transition-transform duration-700 ease-in-out" />
+                    <ShoppingBag className="relative z-10 h-4 w-4 transition-transform duration-300 group-hover:rotate-[-6deg]" />
+                    <span className="relative z-10 font-bold">Buy Now</span>
+                    <ArrowRight className="relative z-10 h-3.5 w-3.5 transition-transform duration-300 group-hover:translate-x-1.5" />
+                  </button>
+                </div>
+              );
+            })()}
 
             <div className="flex items-center gap-2 mb-4">
               {Array.from({ length: 5 }).map((_, i) => (
@@ -530,21 +617,40 @@ function CaseDetailPage() {
         <HeroVideoCard videoSrc={activeHeroVideo} />
 
         {/* EVIDENCE WALL */}
-        <section className="border-t border-[#1A1A1A]/80 pt-10">
-          <div className="flex items-center gap-3 mb-8">
-            <span className="h-8 w-1 bg-[#B31217]" />
-            <div>
-              <h2
-                className="font-display text-[36px] font-bold text-white tracking-[2px] uppercase leading-none"
-                style={{ fontFamily: "Bebas Neue, sans-serif" }}
-              >
-                Evidence Wall
-              </h2>
-              <p className="text-[12px] text-[#A0A0A0] font-mono tracking-[1.5px] uppercase mt-2">
-                {unlocked
-                  ? "Hover the pins to inspect each piece. Follow the red string."
-                  : "Locked until the case is released."}
+        <section className="border-t border-[#1A1A1A]/80 pt-8 sm:pt-10">
+          <div className="mb-6 sm:mb-8">
+            {/* Mobile Header (Matching Reference Image) */}
+            <div className="block md:hidden">
+              <div className="flex items-center gap-2.5">
+                <span className="h-2.5 w-2.5 rounded-full bg-[#D32F2F] shadow-[0_0_10px_#D32F2F]" />
+                <h2
+                  className="font-display text-[26px] font-bold text-white tracking-[2px] uppercase leading-none"
+                  style={{ fontFamily: "Bebas Neue, sans-serif" }}
+                >
+                  CASE KIT
+                </h2>
+              </div>
+              <p className="text-[13px] text-[#A0A0A0] mt-2">
+                Explore the evidence. Connect the dots.
               </p>
+            </div>
+
+            {/* Desktop Header */}
+            <div className="hidden md:flex items-center gap-3">
+              <span className="h-8 w-1 bg-[#B31217]" />
+              <div>
+                <h2
+                  className="font-display text-[36px] font-bold text-white tracking-[2px] uppercase leading-none"
+                  style={{ fontFamily: "Bebas Neue, sans-serif" }}
+                >
+                  Evidence Wall
+                </h2>
+                <p className="text-[12px] text-[#A0A0A0] font-mono tracking-[1.5px] uppercase mt-2">
+                  {unlocked
+                    ? "Hover the pins to inspect each piece. Follow the red string."
+                    : "Locked until the case is released."}
+                </p>
+              </div>
             </div>
           </div>
           {unlocked ? (

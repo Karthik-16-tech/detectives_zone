@@ -105,8 +105,8 @@ class PhonePeService:
             "merchantTransactionId": merchant_transaction_id,
             "merchantUserId": f"CUST_{customer_id}",
             "amount": amount_in_paise,
-            "redirectUrl": redirect_url or f"http://127.0.0.1:5173/cart?order_number={order_number}",
-            "redirectMode": "POST",
+            "redirectUrl": redirect_url or f"http://localhost:5173/cart?merchant_transaction_id={merchant_transaction_id}&order_number={order_number}",
+            "redirectMode": "REDIRECT",
             "callbackUrl": self.callback_url,
             "mobileNumber": (customer_phone or "9999999999").replace("+91", "").replace(" ", "")[-10:],
             "paymentInstrument": {

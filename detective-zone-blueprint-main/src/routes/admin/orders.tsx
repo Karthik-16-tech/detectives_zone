@@ -866,10 +866,10 @@ function AdminOrders() {
 
             {/* Payment Record */}
             <div className="rounded-xl border border-white/10 bg-black/40 p-4 space-y-3">
-              <div className="flex items-center justify-between border-b border-white/10 pb-1.5">
+              <div className="flex items-center justify-between border-b border-white/10 pb-2">
                 <span className="text-[10px] uppercase tracking-wider text-white/50 font-bold flex items-center gap-1.5">
                   <ShieldCheck className="h-3.5 w-3.5 text-blood" />
-                  <span>PhonePe Payment Verification Details</span>
+                  <span>{selectedOrder.payment_method === "COD" ? "Cash on Delivery Details" : "PhonePe Payment Verification Details"}</span>
                 </span>
                 <span className={`text-[9px] uppercase px-2 py-0.5 rounded-full font-bold font-mono ${
                   selectedOrder.payment_status === "PAID" || selectedOrder.payment_status === "SUCCESS"
@@ -878,41 +878,47 @@ function AdminOrders() {
                     ? "bg-red-500/10 text-red-400 border border-red-500/30"
                     : "bg-amber-500/10 text-amber-400 border border-amber-500/30"
                 }`}>
-                  {selectedOrder.payment_status}
+                  {selectedOrder.payment_method === "COD" && selectedOrder.payment_status !== "SUCCESS" ? "PAY ON DELIVERY" : selectedOrder.payment_status}
                 </span>
               </div>
               
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
                 <div>
                   <span className="text-white/40 block text-[10px] uppercase">Gateway Provider</span>
-                  <span className="text-white font-bold">PhonePe PG</span>
+                  <span className="text-white font-bold">{selectedOrder.payment_method === "COD" ? "Cash on Delivery" : "PhonePe PG"}</span>
                 </div>
                 <div>
                   <span className="text-white/40 block text-[10px] uppercase">Payment Method</span>
-                  <span className="text-white font-bold">{selectedOrder.payment_method || "UPI"}</span>
+                  <span className="text-white font-bold">{selectedOrder.payment_method === "COD" ? "Cash on Delivery" : (selectedOrder.payment_method || "UPI")}</span>
                 </div>
                 <div>
-                  <span className="text-white/40 block text-[10px] uppercase">Paid Amount</span>
+                  <span className="text-white/40 block text-[10px] uppercase">{selectedOrder.payment_method === "COD" ? "Amount Payable" : "Paid Amount"}</span>
                   <span className="text-blood font-bold font-display text-sm">₹{selectedOrder.total_amount?.toLocaleString()}</span>
                 </div>
                 <div>
-                  <span className="text-white/40 block text-[10px] uppercase">Verification Time</span>
+                  <span className="text-white/40 block text-[10px] uppercase">{selectedOrder.payment_method === "COD" ? "Collection Status" : "Verification Time"}</span>
                   <span className="text-white/80 font-mono text-[10px]">
-                    {selectedOrder.paid_at ? new Date(selectedOrder.paid_at).toLocaleString() : "Awaiting Settlement"}
+                    {selectedOrder.payment_method === "COD"
+                      ? (selectedOrder.payment_status === "SUCCESS" ? "Collected" : "Pending Collection")
+                      : (selectedOrder.paid_at ? new Date(selectedOrder.paid_at).toLocaleString() : "Awaiting Settlement")}
                   </span>
                 </div>
-                <div className="col-span-2">
-                  <span className="text-white/40 block text-[10px] uppercase">Merchant Transaction ID</span>
-                  <span className="text-white font-mono text-[11px] truncate block select-all bg-black/60 p-1 rounded border border-white/5">
-                    {selectedOrder.transaction_id || "N/A"}
-                  </span>
-                </div>
-                <div className="col-span-2">
-                  <span className="text-white/40 block text-[10px] uppercase">Provider Reference / UTR</span>
-                  <span className="text-white font-mono text-[11px] truncate block select-all bg-black/60 p-1 rounded border border-white/5">
-                    {selectedOrder.gateway_reference || "PPE_GATEWAY_NODE"}
-                  </span>
-                </div>
+                {selectedOrder.payment_method !== "COD" && (
+                  <>
+                    <div className="col-span-2">
+                      <span className="text-white/40 block text-[10px] uppercase">Merchant Transaction ID</span>
+                      <span className="text-white font-mono text-[11px] truncate block select-all bg-black/60 p-1 rounded border border-white/5">
+                        {selectedOrder.transaction_id || "N/A"}
+                      </span>
+                    </div>
+                    <div className="col-span-2">
+                      <span className="text-white/40 block text-[10px] uppercase">Provider Reference / UTR</span>
+                      <span className="text-white font-mono text-[11px] truncate block select-all bg-black/60 p-1 rounded border border-white/5">
+                        {selectedOrder.gateway_reference || "PPE_GATEWAY_NODE"}
+                      </span>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
 

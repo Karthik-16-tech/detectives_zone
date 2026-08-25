@@ -49,6 +49,7 @@ export function SpotlightReveal({
   const target = useRef({ x: 50, y: 50 });
   const current = useRef({ x: 50, y: 50 });
   const [pos, setPos] = useState({ x: 50, y: 50 });
+  const [isHovered, setIsHovered] = useState(false);
 
   useEffect(() => {
     let frame = 0;
@@ -71,6 +72,7 @@ export function SpotlightReveal({
       x: ((clientX - r.left) / r.width) * 100,
       y: ((clientY - r.top) / r.height) * 100,
     };
+    setIsHovered(true);
   };
 
   const core = Math.max(0, Math.min(1, softness)) * 100;
@@ -78,18 +80,24 @@ export function SpotlightReveal({
   return (
     <div
       ref={hostRef}
+      onMouseEnter={(e) => move(e.clientX, e.clientY)}
       onMouseMove={(e) => move(e.clientX, e.clientY)}
+      onTouchStart={(e) => {
+        const t = e.touches[0];
+        if (t) move(t.clientX, t.clientY);
+      }}
       onTouchMove={(e) => {
         const t = e.touches[0];
         if (t) move(t.clientX, t.clientY);
       }}
-      onMouseLeave={() => (target.current = { x: 50, y: 50 })}
+      onTouchEnd={() => setIsHovered(false)}
+      onMouseLeave={() => setIsHovered(false)}
       className={className}
       style={{ position: "relative", overflow: "hidden", ...style }}
     >
       {children}
 
-      {tint ? (
+      {tint && isHovered ? (
         <div
           aria-hidden
           style={{
@@ -110,7 +118,9 @@ export function SpotlightReveal({
           inset: 0,
           zIndex: 10,
           pointerEvents: "none",
-          background: `radial-gradient(circle ${radius}px at ${pos.x}% ${pos.y}%, transparent ${core}%, ${darkness} 100%)`,
+          background: isHovered
+            ? `radial-gradient(circle ${radius}px at ${pos.x}% ${pos.y}%, transparent ${core}%, ${darkness} 100%)`
+            : darkness,
         }}
       />
     </div>

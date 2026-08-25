@@ -1,7 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Request, BackgroundTasks
 from sqlalchemy.orm import Session
 from typing import List, Optional
-from datetime import datetime
+from datetime import datetime, timedelta
 import json
 import os
 import random
@@ -134,8 +134,19 @@ def create_order(
     if not req.items:
         raise HTTPException(status_code=400, detail="Cannot place order with empty cart")
     
-    # ─── SERVER-SIDE PRICE RECALCULATION & STOCK VERIFICATION ───
-    # Never trust client-sent unit_price or total_price
+    # ─── PRODUCTION-GRADE SERVER-SIDE PRICE RECALCULATION & STOCK VERIFICATION ───
+    # Never trust client-sent unit_price, total_price or stock quantities
+    from app.models.case import Case
+    from app.models.setting import SiteSetting
+    from app.services.inventory import (
+        reserve_stock_for_order, commit_stock_reservation, cleanup_expired_reservations,
+        get_available_stock
+    )
+    from app.services.invoice import create_or_get_invoice
+
+    # Sweep any expired pending orders first
+    cleanup_expired_reservations(db)
+
     verified_items = []
     subtotal = 0.0
 
@@ -143,36 +154,63 @@ def create_order(
         if item.quantity <= 0:
             raise HTTPException(status_code=400, detail="Invalid item quantity")
         
-        # Check against database product if product_id exists
+        # 1. Look up Database Product / Case
         product = None
+        case_obj = None
+
         if item.product_id:
             try:
                 pid = int(item.product_id)
                 product = db.query(Product).filter(Product.id == pid).first()
             except (ValueError, TypeError):
                 product = db.query(Product).filter(Product.slug == str(item.product_id)).first()
+        
         if not product and item.sku:
             product = db.query(Product).filter(Product.sku == item.sku).first()
-        if not product and item.item_title:
+
+        clean_sku = (item.sku or "").replace("DZ-KIT-", "").replace("CASE", "").replace("#", "").strip()
+        if clean_sku:
+            case_obj = db.query(Case).filter(
+                (Case.case_number == clean_sku) | 
+                (Case.case_number == f"CASE {clean_sku}") |
+                (Case.slug == str(item.product_id or ""))
+            ).first()
+
+        if not product and not case_obj and item.item_title:
             product = db.query(Product).filter(Product.name.ilike(f"%{item.item_title}%")).first()
+            if not product:
+                case_obj = db.query(Case).filter(Case.title.ilike(f"%{item.item_title}%")).first()
             
-        unit_price = float(product.price) if product else float(item.unit_price or 999.0)
-        item_title = product.name if product else item.item_title
-        sku = product.sku if product else (item.sku or "DZ-CASE")
-        img = (product.cover_image if product and product.cover_image else item.image_url) or "/src/assets/case-voicemail.png"
+        # 2. Strict Server-side Price Lookup (DB is source of truth)
+        if product and product.sale_price and float(product.sale_price) > 0:
+            unit_price = float(product.sale_price)
+        elif product and product.price and float(product.price) > 0:
+            unit_price = float(product.price)
+        elif case_obj and case_obj.price and float(case_obj.price) > 0:
+            unit_price = float(case_obj.price)
+        elif item.unit_price and float(item.unit_price) > 0:
+            unit_price = float(item.unit_price)
+        else:
+            unit_price = 999.0
+
+        item_title = (product.name if product else (case_obj.title if case_obj else item.item_title)) or "Detective Case Box"
+        sku = (product.sku if product else (f"CASE {case_obj.case_number}" if case_obj else item.sku)) or "DZ-CASE"
+        img = (product.cover_image if product and product.cover_image else (case_obj.cover_image if case_obj else item.image_url)) or "/src/assets/case-voicemail.png"
         
-        # Stock verification
-        if product and product.stock_quantity is not None and product.stock_quantity < item.quantity:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Product '{product.name}' has insufficient stock (Only {product.stock_quantity} available)."
-            )
+        # 3. Available stock verification (takes unexpired reservations into account)
+        if product and product.stock_quantity is not None:
+            available = get_available_stock(db, product.id)
+            if available < item.quantity:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Product '{item_title}' is out of stock or currently reserved by other customers (Only {available} available)."
+                )
 
         item_total = round(unit_price * item.quantity, 2)
         subtotal += item_total
         
         verified_items.append({
-            "product_id": product.id if product else None,
+            "product_id": product.id if product else (case_obj.id if case_obj else None),
             "kit_id": None,
             "item_title": item_title,
             "sku": sku,
@@ -191,13 +229,55 @@ def create_order(
         elif code_upper in ["DETECTIVE20", "VIP20"]:
             discount_amount = round(subtotal * 0.20, 2)
 
-    # Free shipping on orders >= ₹1499, otherwise ₹99
-    shipping_fee = 0.0 if (subtotal - discount_amount) >= 1499 else 99.0
-    tax_amount = 0.0 # Inclusive of taxes or 0 for direct retail
-    total_amount = round(max(0.0, subtotal - discount_amount + shipping_fee), 2)
+    # Dynamic Shipping calculation: item-level shipping fee sum or flat rate fallback
+    total_item_shipping = 0.0
+    has_item_shipping = False
+
+    for vi in verified_items:
+        case_search = None
+        if vi.get("sku"):
+            c_num = vi["sku"].replace("DZ-KIT-", "").replace("CASE", "").replace("#", "").strip()
+            case_search = db.query(Case).filter(
+                (Case.case_number == c_num) | 
+                (Case.case_number == f"CASE {c_num}")
+            ).first()
+        if case_search and case_search.shipping_fee is not None:
+            has_item_shipping = True
+            total_item_shipping += float(case_search.shipping_fee) * vi["quantity"]
+
+    flat_setting = db.query(SiteSetting).filter(SiteSetting.key == "shipping_flat_rate").first()
+    thresh_setting = db.query(SiteSetting).filter(SiteSetting.key == "free_shipping_threshold").first()
     
+    try:
+        flat_rate = float(flat_setting.value) if (flat_setting and flat_setting.value is not None and str(flat_setting.value).strip() != "") else 0.0
+    except (ValueError, TypeError):
+        flat_rate = 0.0
+
+    try:
+        threshold = float(thresh_setting.value) if (thresh_setting and thresh_setting.value is not None and str(thresh_setting.value).strip() != "") else 499.0
+    except (ValueError, TypeError):
+        threshold = 499.0
+
+    net_subtotal = subtotal - discount_amount
     is_cod = req.payment_method.upper() == "COD"
+
+    # COD Shipping Fee = ₹80 handling fee; Online prepaid orders = Free Delivery
+    if is_cod:
+        shipping_fee = 80.0
+    elif threshold > 0 and net_subtotal >= threshold:
+        shipping_fee = 0.0
+    elif has_item_shipping:
+        shipping_fee = round(total_item_shipping, 2)
+    else:
+        shipping_fee = round(flat_rate, 2)
+
+    tax_amount = 0.0 # Inclusive of taxes
+    total_amount = round(max(0.0, net_subtotal + shipping_fee), 2)
+    
     txn_id = generate_transaction_id("COD") if is_cod else None
+
+    now = datetime.utcnow()
+    expires_at = (now + timedelta(minutes=10)) if not is_cod else None
 
     order = Order(
         order_number=generate_order_number(),
@@ -220,24 +300,18 @@ def create_order(
         payment_status="PENDING" if is_cod else "PENDING",
         order_status="PAYMENT_CONFIRMED" if is_cod else "PENDING_PAYMENT",
         transaction_id=txn_id,
+        expires_at=expires_at,
         notes=req.notes
     )
     db.add(order)
-    db.commit()
-    db.refresh(order)
+    db.flush()
     
-    # Add items
+    # Add order items
     for vi in verified_items:
         db.add(OrderItem(order_id=order.id, **vi))
     
-    # If COD, automatically deduct stock and record payment log
     if is_cod:
-        for vi in verified_items:
-            if vi.get("product_id"):
-                p = db.query(Product).filter(Product.id == vi["product_id"]).first()
-                if p and p.stock_quantity is not None:
-                    p.stock_quantity = max(0, p.stock_quantity - vi["quantity"])
-
+        # For COD: permanently commit inventory and create invoice immediately
         db.add(Payment(
             order_id=order.id,
             provider="COD",
@@ -249,16 +323,31 @@ def create_order(
             gateway_response_reference=f"GW-COD-{uuid.uuid4().hex[:10].upper()}",
             paid_at=None
         ))
+        commit_stock_reservation(db, order)
+        create_or_get_invoice(db, order, transaction_id=txn_id)
 
-    # Log initial creation event
-    db.add(OrderEvent(
-        order_id=order.id,
-        event_type="ORDER_CONFIRMED" if is_cod else "ORDER_CREATED",
-        previous_status=None,
-        new_status="PAYMENT_CONFIRMED" if is_cod else "PENDING_PAYMENT",
-        message=f"Cash on Delivery order registered (₹{total_amount:,.2f}). To be confirmed within 24 hours." if is_cod else f"Order created with total ₹{total_amount:,.2f} via {order.payment_method}.",
-        performed_by="Customer"
-    ))
+        # Log initial creation event
+        db.add(OrderEvent(
+            order_id=order.id,
+            event_type="ORDER_CONFIRMED",
+            previous_status=None,
+            new_status="PAYMENT_CONFIRMED",
+            message=f"Cash on Delivery order registered (₹{total_amount:,.2f}). To be confirmed within 24 hours.",
+            performed_by="Customer"
+        ))
+    else:
+        # For UPI: create temporary 10-minute stock reservation
+        reserve_stock_for_order(db, order, verified_items, duration_minutes=10)
+
+        # Log initial creation event
+        db.add(OrderEvent(
+            order_id=order.id,
+            event_type="ORDER_CREATED",
+            previous_status=None,
+            new_status="PENDING_PAYMENT",
+            message=f"Order created with total ₹{total_amount:,.2f} via {order.payment_method}. Stock reserved for 10 minutes.",
+            performed_by="Customer"
+        ))
     
     db.commit()
     db.refresh(order)
@@ -283,6 +372,258 @@ def create_order(
     return order
 
 
+@router.get("/{order_id}/payment-status")
+def get_order_payment_status(
+    order_id: int,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db)
+):
+    """
+    Dedicated endpoint to check real-time payment status and expiry for an order.
+    Checks active PhonePe transaction status with PhonePe API if pending.
+    """
+    from app.services.inventory import release_stock_reservation
+    from app.services.phonepe import phonepe_service
+    from app.api.v1.payments import execute_order_confirmation
+
+    order = db.query(Order).filter(Order.id == order_id).first()
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+
+    now = datetime.utcnow()
+
+    # If order is already confirmed / paid
+    if order.payment_status in ["PAID", "SUCCESS"] or order.order_status in ["PAYMENT_CONFIRMED", "CONFIRMED", "ACCEPTED", "PREPARING", "SHIPPED", "DELIVERED"]:
+        return {
+            "order_id": order.id,
+            "order_number": order.order_number,
+            "order_status": "CONFIRMED" if order.order_status == "PAYMENT_CONFIRMED" else order.order_status,
+            "payment_status": "SUCCESS",
+            "payment_method": order.payment_method,
+            "transaction_id": order.transaction_id,
+            "total_amount": order.total_amount,
+            "currency": order.currency or "INR",
+            "is_expired": False,
+            "seconds_remaining": 0,
+            "payment_created_at": order.created_at.isoformat() if order.created_at else None,
+            "payment_expires_at": order.expires_at.isoformat() if order.expires_at else None,
+            "expires_at": order.expires_at.isoformat() if order.expires_at else None,
+            "paid_at": order.paid_at.isoformat() if order.paid_at else None,
+            "message": "Payment verified and order confirmed."
+        }
+
+    # Check expiration (10 minutes)
+    if order.expires_at and order.expires_at <= now and order.order_status == "PENDING_PAYMENT":
+        order.order_status = "EXPIRED"
+        order.payment_status = "EXPIRED"
+        release_stock_reservation(db, order, reason="EXPIRED")
+        db.commit()
+        return {
+            "order_id": order.id,
+            "order_number": order.order_number,
+            "order_status": "EXPIRED",
+            "payment_status": "EXPIRED",
+            "payment_method": order.payment_method,
+            "transaction_id": order.transaction_id,
+            "total_amount": order.total_amount,
+            "currency": order.currency or "INR",
+            "is_expired": True,
+            "seconds_remaining": 0,
+            "payment_created_at": order.created_at.isoformat() if order.created_at else None,
+            "payment_expires_at": order.expires_at.isoformat() if order.expires_at else None,
+            "expires_at": order.expires_at.isoformat() if order.expires_at else None,
+            "paid_at": None,
+            "message": "Payment session expired."
+        }
+
+    # If pending, check with PhonePe Status API via active payment record
+    payment = db.query(Payment).filter(Payment.order_id == order.id).order_by(Payment.id.desc()).first()
+    if payment and payment.transaction_id and payment.status == "PENDING":
+        try:
+            status_resp = phonepe_service.check_payment_status(payment.transaction_id)
+            code = status_resp.get("code")
+            data = status_resp.get("data", {})
+            state = data.get("state")
+            provider_txn_id = data.get("transactionId") or status_resp.get("transactionId")
+
+            if code == "PAYMENT_SUCCESS" or state == "COMPLETED":
+                execute_order_confirmation(
+                    db=db,
+                    payment=payment,
+                    order=order,
+                    provider_transaction_id=provider_txn_id,
+                    raw_response=json.dumps(status_resp),
+                    performed_by="PhonePe Realtime Sync Status Check",
+                    background_tasks=background_tasks
+                )
+                return {
+                    "order_id": order.id,
+                    "order_number": order.order_number,
+                    "order_status": "CONFIRMED",
+                    "payment_status": "SUCCESS",
+                    "payment_method": order.payment_method,
+                    "transaction_id": order.transaction_id,
+                    "total_amount": order.total_amount,
+                    "currency": order.currency or "INR",
+                    "is_expired": False,
+                    "seconds_remaining": 0,
+                    "payment_created_at": order.created_at.isoformat() if order.created_at else None,
+                    "payment_expires_at": order.expires_at.isoformat() if order.expires_at else None,
+                    "expires_at": order.expires_at.isoformat() if order.expires_at else None,
+                    "paid_at": order.paid_at.isoformat() if order.paid_at else datetime.utcnow().isoformat(),
+                    "message": "Payment verified and order confirmed."
+                }
+            elif code in ["PAYMENT_FAILED", "PAYMENT_ERROR"] or state in ["FAILED", "DECLINED"]:
+                payment.status = "FAILED"
+                order.payment_status = "FAILED"
+                order.order_status = "PAYMENT_FAILED"
+                release_stock_reservation(db, order, reason="FAILED")
+                db.commit()
+                return {
+                    "order_id": order.id,
+                    "order_number": order.order_number,
+                    "order_status": "FAILED",
+                    "payment_status": "FAILED",
+                    "payment_method": order.payment_method,
+                    "transaction_id": order.transaction_id,
+                    "total_amount": order.total_amount,
+                    "currency": order.currency or "INR",
+                    "is_expired": False,
+                    "seconds_remaining": 0,
+                    "payment_created_at": order.created_at.isoformat() if order.created_at else None,
+                    "payment_expires_at": order.expires_at.isoformat() if order.expires_at else None,
+                    "expires_at": order.expires_at.isoformat() if order.expires_at else None,
+                    "paid_at": None,
+                    "message": "Payment was not completed."
+                }
+        except Exception:
+            pass
+
+    seconds_remaining = 0
+    if order.expires_at and order.expires_at > now:
+        seconds_remaining = max(0, int((order.expires_at - now).total_seconds()))
+
+
+    return {
+        "order_id": order.id,
+        "order_number": order.order_number,
+        "order_status": order.order_status,
+        "payment_status": "PENDING",
+        "payment_method": order.payment_method,
+        "transaction_id": order.transaction_id,
+        "total_amount": order.total_amount,
+        "currency": order.currency or "INR",
+        "is_expired": False,
+        "seconds_remaining": seconds_remaining,
+        "payment_created_at": order.created_at.isoformat() if order.created_at else None,
+        "payment_expires_at": order.expires_at.isoformat() if order.expires_at else None,
+        "expires_at": order.expires_at.isoformat() if order.expires_at else None,
+        "paid_at": order.paid_at.isoformat() if order.paid_at else None,
+        "message": "Waiting for payment..."
+    }
+
+
+@router.post("/{order_id}/payment/retry")
+def retry_order_payment(
+    order_id: int,
+    db: Session = Depends(get_db)
+):
+    """
+    Restarts a PhonePe payment session for an order that failed or expired.
+    Re-checks stock availability, creates a fresh 10-minute reservation,
+    and returns a new PhonePe transaction & QR payload.
+    """
+    from app.services.inventory import reserve_stock_for_order, cleanup_expired_reservations
+    from app.services.phonepe import phonepe_service
+    from app.api.v1.payments import get_active_upi_id
+    from app.schemas.order import PaymentCreateResponse
+
+    cleanup_expired_reservations(db)
+
+    order = db.query(Order).filter(Order.id == order_id).first()
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+
+    if order.payment_status == "PAID":
+        raise HTTPException(status_code=400, detail="Order is already paid")
+
+    # Reserve inventory again for 10 minutes
+    items_payload = [
+        {"product_id": item.product_id, "quantity": item.quantity}
+        for item in order.items
+    ]
+    reserve_stock_for_order(db, order, items_payload, duration_minutes=10)
+
+    # Generate new merchant transaction ID
+    timestamp_str = datetime.utcnow().strftime("%Y%m%d%H%M%S")
+    rand_suffix = uuid.uuid4().hex[:6].upper()
+    merchant_txn_id = f"MTXN_{timestamp_str}_{order.id}_{rand_suffix}"
+
+    active_upi_id = get_active_upi_id(db)
+
+    phonepe_data = phonepe_service.create_payment_request(
+        merchant_transaction_id=merchant_txn_id,
+        order_number=order.order_number,
+        amount=order.total_amount,
+        customer_id=str(order.id),
+        customer_phone=order.customer_phone,
+        merchant_upi_id=active_upi_id
+    )
+
+    now = datetime.utcnow()
+    expires_at = now + timedelta(minutes=10)
+
+    # Store new payment transaction
+    payment_record = Payment(
+        order_id=order.id,
+        provider="PHONEPE",
+        transaction_id=merchant_txn_id,
+        merchant_transaction_id=merchant_txn_id,
+        payment_method="UPI",
+        amount=order.total_amount,
+        currency=order.currency or "INR",
+        status="PENDING",
+        upi_id=active_upi_id,
+        qr_payload=phonepe_data["qr_payload"],
+        payment_url=phonepe_data.get("payment_url"),
+        raw_response=json.dumps({"checksum": phonepe_data["checksum"]}),
+        expires_at=expires_at,
+        created_at=now
+    )
+    db.add(payment_record)
+
+    order.transaction_id = merchant_txn_id
+    order.order_status = "PENDING_PAYMENT"
+    order.payment_status = "PENDING"
+    order.expires_at = expires_at
+
+    db.add(OrderEvent(
+        order_id=order.id,
+        event_type="PAYMENT_RETRY_INITIATED",
+        previous_status=order.order_status,
+        new_status="PENDING_PAYMENT",
+        message=f"Customer initiated payment retry (New Txn ID: {merchant_txn_id}). Stock re-reserved for 10 minutes.",
+        performed_by="Customer"
+    ))
+
+    db.commit()
+    db.refresh(payment_record)
+
+    return PaymentCreateResponse(
+        merchant_transaction_id=merchant_txn_id,
+        order_id=order.id,
+        order_number=order.order_number,
+        amount=order.total_amount,
+        currency=order.currency or "INR",
+        upi_id=active_upi_id,
+        qr_payload=phonepe_data["qr_payload"],
+        qr_image_url=phonepe_data["qr_image_url"],
+        payment_url=phonepe_data.get("payment_url"),
+        status="PENDING",
+        expires_in_seconds=600
+    )
+
+
 @router.post("/{order_id}/process-payment", response_model=OrderOut)
 def process_order_payment(
     order_id: int,
@@ -290,16 +631,19 @@ def process_order_payment(
     db: Session = Depends(get_db)
 ):
     """
-    Secure server-side payment completion & verification.
+    Secure server-side payment completion & verification for COD or Direct flows.
     Processes transaction, sets status to PAYMENT_CONFIRMED, creates payment record,
-    decrements stock atomically, logs event, and sends confirmation email and WhatsApp.
+    commits stock atomically, creates invoice, logs event, and sends confirmation email and WhatsApp.
     """
+    from app.services.inventory import commit_stock_reservation
+    from app.services.invoice import create_or_get_invoice
+
     order = db.query(Order).filter(Order.id == order_id).first()
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
     
-    # Idempotency check: if already paid, return safely
-    if order.payment_status == "SUCCESS" and order.order_status in ["PAYMENT_CONFIRMED", "ACCEPTED", "PREPARING", "SHIPPED"]:
+    # Idempotency check: if already confirmed, return safely
+    if order.payment_status in ["PAID", "SUCCESS"] and order.order_status in ["PAYMENT_CONFIRMED", "ACCEPTED", "PREPARING", "SHIPPED"]:
         backup_order_to_json_file(order)
         return order
 
@@ -309,7 +653,7 @@ def process_order_payment(
     # Create Payment record
     payment_record = Payment(
         order_id=order.id,
-        provider="SANDBOX_GATEWAY" if not is_cod else "COD",
+        provider="COD" if is_cod else "SANDBOX_GATEWAY",
         transaction_id=txn_id,
         payment_method=req.payment_method.upper(),
         amount=order.total_amount,
@@ -328,12 +672,11 @@ def process_order_payment(
     order.paid_at = None if is_cod else datetime.utcnow()
     order.payment_method = req.payment_method.upper()
     
-    # Deduct product stocks
-    for oi in order.items:
-        if oi.product_id:
-            p = db.query(Product).filter(Product.id == oi.product_id).first()
-            if p and p.stock_quantity is not None:
-                p.stock_quantity = max(0, p.stock_quantity - oi.quantity)
+    # Commit Stock Reservation: RESERVED -> SOLD & Deduct Inventory
+    commit_stock_reservation(db, order)
+
+    # Generate Financial Invoice
+    create_or_get_invoice(db, order, transaction_id=txn_id)
     
     # Log timeline event
     msg = f"Cash on Delivery order confirmed (₹{order.total_amount:,.2f}). To be collected upon delivery." if is_cod else f"Payment of ₹{order.total_amount:,.2f} confirmed via {req.payment_method.upper()} (Txn ID: {txn_id})."

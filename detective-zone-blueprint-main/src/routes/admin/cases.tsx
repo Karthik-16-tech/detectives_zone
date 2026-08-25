@@ -51,6 +51,9 @@ function AdminCases() {
     estimated_duration: "3–5 HOURS",
     rating: 5.0,
     short_description: "",
+    price: 999,
+    original_price: 1499,
+    shipping_fee: 0,
     featured: false,
     is_published: true,
   });
@@ -127,6 +130,9 @@ function AdminCases() {
     try {
       const payload = {
         ...formData,
+        price: isNaN(Number(formData.price)) ? 999 : Number(formData.price),
+        original_price: isNaN(Number(formData.original_price)) ? 1499 : Number(formData.original_price),
+        shipping_fee: isNaN(Number(formData.shipping_fee)) ? 0 : Number(formData.shipping_fee),
         slug: formData.slug.trim() || formData.case_number.toLowerCase().replace(/\s+/g, "-"),
       };
       const newCase = await api.createCase(payload);
@@ -146,6 +152,9 @@ function AdminCases() {
         estimated_duration: "3–5 HOURS",
         rating: 5.0,
         short_description: "",
+        price: 999,
+        original_price: 1499,
+        shipping_fee: 0,
         featured: false,
         is_published: true,
       });
@@ -176,7 +185,10 @@ function AdminCases() {
         status: editingCase.status,
         difficulty: editingCase.difficulty,
         estimated_duration: editingCase.estimated_duration,
-        rating: parseFloat(editingCase.rating) || 5.0,
+        rating: isNaN(Number(editingCase.rating)) ? 5.0 : Number(editingCase.rating),
+        price: isNaN(Number(editingCase.price)) ? 999 : Number(editingCase.price),
+        original_price: isNaN(Number(editingCase.original_price)) ? 1499 : Number(editingCase.original_price),
+        shipping_fee: isNaN(Number(editingCase.shipping_fee)) ? 0 : Number(editingCase.shipping_fee),
         featured: editingCase.featured,
         is_published: editingCase.is_published,
       });
@@ -293,7 +305,7 @@ function AdminCases() {
                     {c.is_published ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
                   </button>
                   <button
-                    onClick={() => setEditingCase({ ...c })}
+                    onClick={() => setEditingCase({ ...c, price: c.price ?? 999, original_price: c.original_price ?? 1499, shipping_fee: c.shipping_fee ?? 0 })}
                     title="Edit Card Details"
                     className="rounded-full bg-black/70 p-1.5 text-white/70 border border-white/20 hover:text-white hover:border-blood/50 transition-colors cursor-pointer"
                   >
@@ -320,6 +332,26 @@ function AdminCases() {
                 <p className="mt-2 font-mono text-[11px] leading-relaxed text-white/45 line-clamp-2">
                   {c.short_description || c.intro_text || "No summary provided."}
                 </p>
+                
+                {/* Price Rate Display */}
+                <div className="mt-3 flex flex-wrap items-center gap-2 bg-white/[0.02] border border-white/5 rounded-lg px-3 py-1.5 w-fit">
+                  <span className="font-mono text-sm font-bold text-white tracking-wider">
+                    ₹{c.price ?? 999}
+                  </span>
+                  {c.original_price && c.original_price > (c.price ?? 999) && (
+                    <span className="font-mono text-[11px] text-white/35 line-through">
+                      ₹{c.original_price}
+                    </span>
+                  )}
+                  {c.original_price && c.price && c.original_price > c.price && (
+                    <span className="font-mono text-[8.5px] uppercase font-bold text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded">
+                      {Math.round(((c.original_price - c.price) / c.original_price) * 100)}% OFF
+                    </span>
+                  )}
+                  <span className="font-mono text-[8.5px] text-white/40 uppercase pl-1.5 border-l border-white/10">
+                    {c.shipping_fee ? `₹${c.shipping_fee} Ship` : "Free Delivery"}
+                  </span>
+                </div>
 
                 {/* Stars and Live Indicator */}
                 <div className="mt-4 flex items-center justify-between border-t border-white/[0.06] pt-3 text-xs">
@@ -342,7 +374,7 @@ function AdminCases() {
                 <div className="mt-5 flex items-center justify-between border-t border-white/[0.06] pt-4 gap-2">
                   <div className="flex items-center gap-2">
                     <button
-                      onClick={() => setEditingCase({ ...c })}
+                      onClick={() => setEditingCase({ ...c, price: c.price ?? 999, original_price: c.original_price ?? 1499, shipping_fee: c.shipping_fee ?? 0 })}
                       className="flex items-center gap-1.5 rounded-lg bg-white/[0.04] px-2.5 py-1.5 font-mono text-[10px] uppercase tracking-wider text-white/80 hover:bg-white/[0.08] hover:text-white transition-colors cursor-pointer border border-white/5"
                     >
                       <SlidersHorizontal className="h-3 w-3 text-blood" />
@@ -450,6 +482,70 @@ function AdminCases() {
                 />
               </div>
 
+              {/* LIVE CARD SHOWCASE PRICING & RATES */}
+              <div className="rounded-xl border border-blood/40 bg-gradient-to-br from-blood/[0.14] via-blood/[0.04] to-black/80 p-4 space-y-3 shadow-[0_0_20px_rgba(179,18,23,0.15)]">
+                <div className="flex items-center justify-between border-b border-blood/20 pb-2">
+                  <span className="font-mono text-[10px] uppercase font-bold tracking-wider text-blood flex items-center gap-1.5">
+                    <span>💳 Case Card Showcase Pricing & Rate (INR ₹)</span>
+                  </span>
+                  {editingCase.price !== "" && editingCase.price !== undefined && editingCase.price !== null && (
+                    <span className="font-mono text-[10px] text-white/70">
+                      Card Rate Preview: <b className="text-white text-xs">₹{editingCase.price}</b>
+                      {editingCase.original_price && Number(editingCase.original_price) > Number(editingCase.price) && (
+                        <span className="text-emerald-400 font-bold ml-1.5 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded">
+                          {Math.round(((Number(editingCase.original_price) - Number(editingCase.price)) / Number(editingCase.original_price)) * 100)}% OFF
+                        </span>
+                      )}
+                    </span>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block uppercase text-white font-bold mb-1 text-[10.5px]">
+                      Sale Price / Rate (₹) *
+                    </label>
+                    <input
+                      type="number"
+                      required
+                      value={editingCase.price ?? ""}
+                      onChange={(e) => setEditingCase({ ...editingCase, price: e.target.value === "" ? "" : Number(e.target.value) })}
+                      placeholder="999"
+                      className="w-full rounded-lg border border-blood/50 bg-black p-2.5 text-white font-mono font-bold text-sm outline-none focus:border-blood focus:ring-1 focus:ring-blood"
+                    />
+                    <span className="block text-[9.5px] font-sans text-white/50 mt-1">Price displayed on case cards</span>
+                  </div>
+
+                  <div>
+                    <label className="block uppercase text-white/70 mb-1 text-[10.5px]">
+                      Original / Strikethrough (₹)
+                    </label>
+                    <input
+                      type="number"
+                      value={editingCase.original_price ?? ""}
+                      onChange={(e) => setEditingCase({ ...editingCase, original_price: e.target.value === "" ? "" : Number(e.target.value) })}
+                      placeholder="1499"
+                      className="w-full rounded-lg border border-white/15 bg-black p-2.5 text-white/80 font-mono text-sm outline-none focus:border-blood"
+                    />
+                    <span className="block text-[9.5px] font-sans text-white/50 mt-1">Strikethrough MRP value</span>
+                  </div>
+
+                  <div>
+                    <label className="block uppercase text-white/70 mb-1 text-[10.5px]">
+                      Shipping Fee (₹)
+                    </label>
+                    <input
+                      type="number"
+                      value={editingCase.shipping_fee ?? ""}
+                      onChange={(e) => setEditingCase({ ...editingCase, shipping_fee: e.target.value === "" ? "" : Number(e.target.value) })}
+                      placeholder="0"
+                      className="w-full rounded-lg border border-white/15 bg-black p-2.5 text-white/80 font-mono text-sm outline-none focus:border-blood"
+                    />
+                    <span className="block text-[9.5px] font-sans text-white/50 mt-1">0 for Free Delivery</span>
+                  </div>
+                </div>
+              </div>
+
               {/* Image URL, Upload & Live Preview */}
               <div>
                 <label className="block uppercase text-white/60 mb-1">Cover Image (URL or Upload)</label>
@@ -506,6 +602,9 @@ function AdminCases() {
                     <option value="UNSOLVED">UNSOLVED</option>
                     <option value="COMING SOON">COMING SOON</option>
                     <option value="COMPLETED">COMPLETED</option>
+                    <option value="SOLVED">SOLVED</option>
+                    <option value="ACTIVE">ACTIVE</option>
+                    <option value="CLASSIFIED">CLASSIFIED</option>
                   </select>
                 </div>
                 <div>
@@ -653,6 +752,63 @@ function AdminCases() {
                 />
               </div>
 
+              {/* LIVE CARD SHOWCASE PRICING & RATES */}
+              <div className="rounded-xl border border-blood/40 bg-gradient-to-br from-blood/[0.14] via-blood/[0.04] to-black/80 p-4 space-y-3 shadow-[0_0_20px_rgba(179,18,23,0.15)]">
+                <div className="flex items-center justify-between border-b border-blood/20 pb-2">
+                  <span className="font-mono text-[10px] uppercase font-bold tracking-wider text-blood flex items-center gap-1.5">
+                    <span>💳 Case Card Showcase Pricing & Rate (INR ₹)</span>
+                  </span>
+                  {formData.price !== 0 && formData.price !== undefined && (
+                    <span className="font-mono text-[10px] text-white/70">
+                      Card Rate: <b className="text-white text-xs">₹{formData.price}</b>
+                    </span>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block uppercase text-white font-bold mb-1 text-[10.5px]">
+                      Sale Price / Rate (₹) *
+                    </label>
+                    <input
+                      type="number"
+                      required
+                      value={formData.price ?? ""}
+                      onChange={(e) => setFormData({ ...formData, price: e.target.value === "" ? 0 : Number(e.target.value) })}
+                      placeholder="999"
+                      className="w-full rounded-lg border border-blood/50 bg-black p-2.5 text-white font-mono font-bold text-sm outline-none focus:border-blood focus:ring-1 focus:ring-blood"
+                    />
+                    <span className="block text-[9.5px] font-sans text-white/50 mt-1">Price on showcase card</span>
+                  </div>
+                  <div>
+                    <label className="block uppercase text-white/70 mb-1 text-[10.5px]">
+                      Original / Strikethrough (₹)
+                    </label>
+                    <input
+                      type="number"
+                      value={formData.original_price ?? ""}
+                      onChange={(e) => setFormData({ ...formData, original_price: e.target.value === "" ? 0 : Number(e.target.value) })}
+                      placeholder="1499"
+                      className="w-full rounded-lg border border-white/15 bg-black p-2.5 text-white text-sm outline-none focus:border-blood font-mono"
+                    />
+                    <span className="block text-[9.5px] font-sans text-white/50 mt-1">Strikethrough MRP</span>
+                  </div>
+                  <div>
+                    <label className="block uppercase text-white/70 mb-1 text-[10.5px]">
+                      Shipping Fee (₹)
+                    </label>
+                    <input
+                      type="number"
+                      value={formData.shipping_fee ?? ""}
+                      onChange={(e) => setFormData({ ...formData, shipping_fee: e.target.value === "" ? 0 : Number(e.target.value) })}
+                      placeholder="0"
+                      className="w-full rounded-lg border border-white/15 bg-black p-2.5 text-white text-sm outline-none focus:border-blood font-mono"
+                    />
+                    <span className="block text-[9.5px] font-sans text-white/50 mt-1">0 for Free Delivery</span>
+                  </div>
+                </div>
+              </div>
+
               <div>
                 <ImageUploadField
                   label="Case Cover Image (S3 URL or Upload)"
@@ -663,7 +819,7 @@ function AdminCases() {
                 />
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
                 <div>
                   <label className="block uppercase text-white/60 mb-1">Status</label>
                   <select
@@ -674,6 +830,9 @@ function AdminCases() {
                     <option value="UNSOLVED">UNSOLVED</option>
                     <option value="COMING SOON">COMING SOON</option>
                     <option value="COMPLETED">COMPLETED</option>
+                    <option value="SOLVED">SOLVED</option>
+                    <option value="ACTIVE">ACTIVE</option>
+                    <option value="CLASSIFIED">CLASSIFIED</option>
                   </select>
                 </div>
                 <div>
@@ -696,6 +855,19 @@ function AdminCases() {
                     value={formData.estimated_duration}
                     onChange={(e) => setFormData({ ...formData, estimated_duration: e.target.value })}
                     placeholder="3–5 HOURS"
+                    className="w-full rounded-lg border border-white/10 bg-black/60 p-2.5 text-white outline-none focus:border-blood"
+                  />
+                </div>
+                <div>
+                  <label className="block uppercase text-white/60 mb-1">Rating (1–5)</label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    min="1"
+                    max="5"
+                    value={formData.rating}
+                    onChange={(e) => setFormData({ ...formData, rating: Number(e.target.value) || 5.0 })}
+                    placeholder="5.0"
                     className="w-full rounded-lg border border-white/10 bg-black/60 p-2.5 text-white outline-none focus:border-blood"
                   />
                 </div>

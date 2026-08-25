@@ -87,14 +87,14 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Detective Zone — Story-Driven Investigation Cases" },
+      { title: "Detectives Zone — Story-Driven Investigation Cases" },
       {
         name: "description",
         content:
-          "Detective Zone is a cinematic, story-driven investigation experience. Examine evidence, connect clues and uncover the truth hidden in the shadows.",
+          "Detectives Zone is a cinematic, story-driven investigation experience. Examine evidence, connect clues and uncover the truth hidden in the shadows.",
       },
-      { name: "author", content: "Detective Zone" },
-      { property: "og:title", content: "Detective Zone — Story-Driven Investigation Cases" },
+      { name: "author", content: "Detectives Zone" },
+      { property: "og:title", content: "Detectives Zone — Story-Driven Investigation Cases" },
       {
         property: "og:description",
         content: "Examine the evidence. Connect the unconnected. Uncover what others never saw.",
@@ -114,6 +114,12 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         href: "https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@300;400;500&family=IBM+Plex+Sans:wght@300;400;500&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&family=Special+Elite&family=Courier+Prime:wght@400;700&family=Caveat:wght@400;500;600;700&family=Share+Tech+Mono&display=swap",
       },
       { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
+    ],
+    scripts: [
+      {
+        src: "https://checkout.razorpay.com/v1/checkout.js",
+        async: true,
+      },
     ],
   }),
 
@@ -142,8 +148,7 @@ function RootComponent() {
   const routerState = useRouterState();
   const pathname = routerState.location.pathname;
   const isAdminRoute = pathname.startsWith("/admin");
-  const isHomepage = pathname === "/";
-  const showWhatsAppButton = !isAdminRoute && !isHomepage;
+  const showWhatsAppButton = !isAdminRoute;
 
   return (
     <QueryClientProvider client={queryClient}>

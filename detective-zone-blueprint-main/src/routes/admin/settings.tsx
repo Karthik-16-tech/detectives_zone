@@ -9,6 +9,9 @@ import {
   AlertCircle,
   MessageCircle,
   ExternalLink,
+  Mail,
+  Send,
+  RefreshCw,
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { AdminLayout } from "@/components/admin/AdminLayout";
@@ -40,6 +43,8 @@ function AdminSettings() {
   const [upiSuccess, setUpiSuccess] = useState(false);
   const [savingWhatsApp, setSavingWhatsApp] = useState(false);
   const [whatsappSuccess, setWhatsappSuccess] = useState(false);
+  const [testingSmtp, setTestingSmtp] = useState(false);
+  const [smtpDiag, setSmtpDiag] = useState<any | null>(null);
 
   const handleSaveUpiId = async () => {
     const upi = settings.upi_id?.trim() || "";
@@ -77,6 +82,22 @@ function AdminSettings() {
       alert(err.message || "Failed to update WhatsApp settings");
     } finally {
       setSavingWhatsApp(false);
+    }
+  };
+
+  const handleTestSmtp = async () => {
+    try {
+      setTestingSmtp(true);
+      const diag = await api.adminTestEmail();
+      setSmtpDiag(diag);
+    } catch (err: any) {
+      setSmtpDiag({
+        status: "FAILED",
+        error: err.message || "Failed to execute SMTP diagnostic test",
+        message: err.message || "Failed to execute SMTP diagnostic test",
+      });
+    } finally {
+      setTestingSmtp(false);
     }
   };
 
@@ -340,6 +361,191 @@ function AdminSettings() {
             </div>
 
             <div className="border-t border-white/10 pt-4">
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="font-display text-xs font-bold uppercase tracking-wider text-white flex items-center gap-2">
+                  <span className="h-2 w-2 rounded-full bg-[#B31217]" />
+                  <span>Cases Page — Case Statistics CMS</span>
+                </h4>
+                <span className="font-mono text-[9px] uppercase tracking-wider text-[#B31217] bg-[#B31217]/10 border border-[#B31217]/30 px-2 py-0.5 rounded-full font-bold">
+                  Cases Dashboard Sync
+                </span>
+              </div>
+              <p className="text-[11px] text-white/50 mb-3">
+                Customize the 4 statistics metric cards displayed at the bottom of the Cases page (/cases). Leave count blank to use dynamic system count.
+              </p>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Metric 1 */}
+                <div className="p-3 bg-black/40 border border-white/5 rounded-lg space-y-2">
+                  <span className="font-mono text-[10px] uppercase tracking-wider text-[#B31217] font-bold">Card 1: Total Cases</span>
+                  <div>
+                    <label className="block uppercase text-white/50 text-[10px] mb-1">Count / Value</label>
+                    <input
+                      type="text"
+                      value={settings.stats_total_cases || ""}
+                      onChange={(e) => setSettings({ ...settings, stats_total_cases: e.target.value })}
+                      placeholder="e.g. 06 (or blank for auto count)"
+                      className="w-full rounded-lg border border-white/10 bg-black/60 p-2 text-white font-mono text-xs outline-none focus:border-blood"
+                    />
+                  </div>
+                  <div>
+                    <label className="block uppercase text-white/50 text-[10px] mb-1">Card Label</label>
+                    <input
+                      type="text"
+                      value={settings.stats_total_cases_label || ""}
+                      onChange={(e) => setSettings({ ...settings, stats_total_cases_label: e.target.value })}
+                      placeholder="Total Cases"
+                      className="w-full rounded-lg border border-white/10 bg-black/60 p-2 text-white font-mono text-xs outline-none focus:border-blood"
+                    />
+                  </div>
+                </div>
+
+                {/* Metric 2 */}
+                <div className="p-3 bg-black/40 border border-white/5 rounded-lg space-y-2">
+                  <span className="font-mono text-[10px] uppercase tracking-wider text-[#B31217] font-bold">Card 2: Unsolved</span>
+                  <div>
+                    <label className="block uppercase text-white/50 text-[10px] mb-1">Count / Value</label>
+                    <input
+                      type="text"
+                      value={settings.stats_unsolved_cases || ""}
+                      onChange={(e) => setSettings({ ...settings, stats_unsolved_cases: e.target.value })}
+                      placeholder="e.g. 04 (or blank for auto count)"
+                      className="w-full rounded-lg border border-white/10 bg-black/60 p-2 text-white font-mono text-xs outline-none focus:border-blood"
+                    />
+                  </div>
+                  <div>
+                    <label className="block uppercase text-white/50 text-[10px] mb-1">Card Label</label>
+                    <input
+                      type="text"
+                      value={settings.stats_unsolved_cases_label || ""}
+                      onChange={(e) => setSettings({ ...settings, stats_unsolved_cases_label: e.target.value })}
+                      placeholder="Unsolved"
+                      className="w-full rounded-lg border border-white/10 bg-black/60 p-2 text-white font-mono text-xs outline-none focus:border-blood"
+                    />
+                  </div>
+                </div>
+
+                {/* Metric 3 */}
+                <div className="p-3 bg-black/40 border border-white/5 rounded-lg space-y-2">
+                  <span className="font-mono text-[10px] uppercase tracking-wider text-[#B31217] font-bold">Card 3: Completed</span>
+                  <div>
+                    <label className="block uppercase text-white/50 text-[10px] mb-1">Count / Value</label>
+                    <input
+                      type="text"
+                      value={settings.stats_completed_cases || ""}
+                      onChange={(e) => setSettings({ ...settings, stats_completed_cases: e.target.value })}
+                      placeholder="e.g. 02 (or blank for auto count)"
+                      className="w-full rounded-lg border border-white/10 bg-black/60 p-2 text-white font-mono text-xs outline-none focus:border-blood"
+                    />
+                  </div>
+                  <div>
+                    <label className="block uppercase text-white/50 text-[10px] mb-1">Card Label</label>
+                    <input
+                      type="text"
+                      value={settings.stats_completed_cases_label || ""}
+                      onChange={(e) => setSettings({ ...settings, stats_completed_cases_label: e.target.value })}
+                      placeholder="Completed"
+                      className="w-full rounded-lg border border-white/10 bg-black/60 p-2 text-white font-mono text-xs outline-none focus:border-blood"
+                    />
+                  </div>
+                </div>
+
+                {/* Metric 4 */}
+                <div className="p-3 bg-black/40 border border-white/5 rounded-lg space-y-2">
+                  <span className="font-mono text-[10px] uppercase tracking-wider text-[#B31217] font-bold">Card 4: Detectives</span>
+                  <div>
+                    <label className="block uppercase text-white/50 text-[10px] mb-1">Count / Value</label>
+                    <input
+                      type="text"
+                      value={settings.stats_detectives_count || ""}
+                      onChange={(e) => setSettings({ ...settings, stats_detectives_count: e.target.value })}
+                      placeholder="10K+"
+                      className="w-full rounded-lg border border-white/10 bg-black/60 p-2 text-white font-mono text-xs outline-none focus:border-blood"
+                    />
+                  </div>
+                  <div>
+                    <label className="block uppercase text-white/50 text-[10px] mb-1">Card Label</label>
+                    <input
+                      type="text"
+                      value={settings.stats_detectives_label || ""}
+                      onChange={(e) => setSettings({ ...settings, stats_detectives_label: e.target.value })}
+                      placeholder="Detectives"
+                      className="w-full rounded-lg border border-white/10 bg-black/60 p-2 text-white font-mono text-xs outline-none focus:border-blood"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="border-t border-white/10 pt-4">
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="font-display text-xs font-bold uppercase tracking-wider text-white flex items-center gap-2">
+                  <Mail className="h-3.5 w-3.5 text-blood" />
+                  <span>Classified Dispatch (Footer Newsletter) CMS</span>
+                </h4>
+                <span className="font-mono text-[9px] uppercase tracking-wider text-blood bg-blood/10 border border-blood/30 px-2 py-0.5 rounded-full font-bold">
+                  Footer Live Sync
+                </span>
+              </div>
+              <p className="text-[11px] text-white/50 mb-3">
+                Customize the newsletter & clearance request box in the website footer. All submitted emails are delivered straight to your Admin Contact & Inquiries Inbox.
+              </p>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block uppercase text-white/50 text-[10px] mb-1">Badge / Kicker</label>
+                  <input
+                    type="text"
+                    value={settings.dispatch_kicker || ""}
+                    onChange={(e) => setSettings({ ...settings, dispatch_kicker: e.target.value })}
+                    placeholder="CLASSIFIED DISPATCH"
+                    className="w-full rounded-lg border border-white/10 bg-black/60 p-2.5 text-white font-mono text-xs outline-none focus:border-blood"
+                  />
+                </div>
+                <div>
+                  <label className="block uppercase text-white/50 text-[10px] mb-1">Headline Title</label>
+                  <input
+                    type="text"
+                    value={settings.dispatch_title || ""}
+                    onChange={(e) => setSettings({ ...settings, dispatch_title: e.target.value })}
+                    placeholder="RECEIVE NEW CASE FILES"
+                    className="w-full rounded-lg border border-white/10 bg-black/60 p-2.5 text-white font-mono text-xs outline-none focus:border-blood"
+                  />
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="block uppercase text-white/50 text-[10px] mb-1">Description Subtitle</label>
+                  <input
+                    type="text"
+                    value={settings.dispatch_description || ""}
+                    onChange={(e) => setSettings({ ...settings, dispatch_description: e.target.value })}
+                    placeholder="Get notified as soon as new investigations, physical crime scene kits, and clues drop."
+                    className="w-full rounded-lg border border-white/10 bg-black/60 p-2.5 text-white font-sans text-xs outline-none focus:border-blood"
+                  />
+                </div>
+                <div>
+                  <label className="block uppercase text-white/50 text-[10px] mb-1">Input Placeholder</label>
+                  <input
+                    type="text"
+                    value={settings.dispatch_placeholder || ""}
+                    onChange={(e) => setSettings({ ...settings, dispatch_placeholder: e.target.value })}
+                    placeholder="AGENT@DETECTIVESZONE.CO"
+                    className="w-full rounded-lg border border-white/10 bg-black/60 p-2.5 text-white font-mono text-xs outline-none focus:border-blood"
+                  />
+                </div>
+                <div>
+                  <label className="block uppercase text-white/50 text-[10px] mb-1">Button Action Text</label>
+                  <input
+                    type="text"
+                    value={settings.dispatch_button_text || ""}
+                    onChange={(e) => setSettings({ ...settings, dispatch_button_text: e.target.value })}
+                    placeholder="REQUEST CLEARANCE"
+                    className="w-full rounded-lg border border-white/10 bg-black/60 p-2.5 text-white font-mono text-xs outline-none focus:border-blood"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="border-t border-white/10 pt-4">
               <h4 className="font-display text-xs font-bold uppercase tracking-wider text-white mb-3">
                 Official Contact & Dispatch Points
               </h4>
@@ -374,90 +580,7 @@ function AdminSettings() {
               </div>
             </div>
 
-            {/* ═══════════════════════════════════════════════════════════
-                PHONEPE & UPI PAYMENT GATEWAY CONFIGURATION
-            ═══════════════════════════════════════════════════════════ */}
-            <div className="border-t border-white/10 pt-4">
-              <div className="flex items-center justify-between mb-3">
-                <h4 className="font-display text-xs font-bold uppercase tracking-wider text-blood flex items-center gap-2">
-                  <Shield className="h-3.5 w-3.5" />
-                  <span>UPI Payment Gateway & PhonePe Settings</span>
-                </h4>
-                <span className="font-mono text-[9px] uppercase tracking-wider text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 rounded-full font-bold">
-                  Backend Verified
-                </span>
-              </div>
-              
-              <div className="space-y-4">
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <label className="block uppercase text-white/70 font-bold text-xs">
-                      Active Merchant UPI ID <span className="text-blood">*</span>
-                    </label>
-                    <span className="text-[10px] text-white/40 font-mono">Scanned by PhonePe, GPay, Paytm</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="text"
-                      required
-                      value={settings.upi_id || "8885296645@ybl"}
-                      onChange={(e) => setSettings({ ...settings, upi_id: e.target.value })}
-                      placeholder="8885296645@ybl"
-                      className="flex-1 rounded-lg border border-blood/50 bg-black/80 p-2.5 text-white font-mono text-sm outline-none focus:border-blood focus:ring-1 focus:ring-blood shadow-[0_0_12px_rgba(200,29,36,0.15)]"
-                    />
-                    <button
-                      type="button"
-                      onClick={handleSaveUpiId}
-                      disabled={savingUpi}
-                      className="rounded-lg bg-blood px-4 py-2.5 font-display text-xs font-bold uppercase tracking-wider text-white hover:bg-blood/90 transition-all cursor-pointer shrink-0 disabled:opacity-50 flex items-center gap-1.5 shadow-[0_0_15px_rgba(200,29,36,0.3)]"
-                    >
-                      <Save className="h-3.5 w-3.5" />
-                      <span>{savingUpi ? "Saving..." : upiSuccess ? "✓ Updated!" : "Update UPI"}</span>
-                    </button>
-                  </div>
-                  {upiSuccess && (
-                    <p className="mt-1 text-[11px] text-emerald-400 font-mono font-bold animate-in fade-in">
-                      ✓ Merchant UPI ID updated! All customer payment QR codes are now routing to {settings.upi_id}.
-                    </p>
-                  )}
-                  <p className="mt-1 text-[10px] text-white/50">
-                    All customer QR codes and UPI deep links will dynamically route payments to this UPI address.
-                  </p>
-                </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block uppercase text-white/50 mb-1">PhonePe Merchant ID</label>
-                    <input
-                      type="text"
-                      value={settings.phonepe_merchant_id || "PGTESTPAYUAT"}
-                      onChange={(e) => setSettings({ ...settings, phonepe_merchant_id: e.target.value })}
-                      placeholder="PGTESTPAYUAT"
-                      className="w-full rounded-lg border border-white/10 bg-black/60 p-2.5 text-white outline-none focus:border-blood font-mono text-xs"
-                    />
-                  </div>
-                  <div>
-                    <label className="block uppercase text-white/50 mb-1">Gateway Environment</label>
-                    <select
-                      value={settings.phonepe_env || "UAT"}
-                      onChange={(e) => setSettings({ ...settings, phonepe_env: e.target.value })}
-                      className="w-full rounded-lg border border-white/10 bg-black/60 p-2.5 text-white outline-none focus:border-blood font-mono text-xs"
-                    >
-                      <option value="UAT">UAT Sandbox (Test Environment)</option>
-                      <option value="PRODUCTION">Production (Live Hermes)</option>
-                      <option value="SIMULATED">Simulated Mode (Local Mock)</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="rounded-lg border border-white/10 bg-black/40 p-3 font-mono text-[10px] space-y-1 text-white/60">
-                  <div className="text-white/80 font-bold uppercase">PhonePe Webhook Endpoint:</div>
-                  <code className="text-blood select-all block bg-black/80 p-1.5 rounded border border-white/5">
-                    POST /api/v1/payments/phonepe/webhook
-                  </code>
-                </div>
-              </div>
-            </div>
 
             {/* ═══════════════════════════════════════════════════════════
                 WHATSAPP CHAT & FLOATING BUTTON REDIRECTION PANEL
@@ -541,20 +664,22 @@ function AdminSettings() {
               </h4>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block uppercase text-white/50 mb-1">Flat Rate Shipping ($)</label>
+                  <label className="block uppercase text-white/50 mb-1">Flat Rate Shipping (₹)</label>
                   <input
                     type="text"
                     value={settings.shipping_flat_rate || ""}
                     onChange={(e) => setSettings({ ...settings, shipping_flat_rate: e.target.value })}
+                    placeholder="99"
                     className="w-full rounded-lg border border-white/10 bg-black/60 p-2.5 text-white outline-none focus:border-blood"
                   />
                 </div>
                 <div>
-                  <label className="block uppercase text-white/50 mb-1">Free Shipping Threshold ($)</label>
+                  <label className="block uppercase text-white/50 mb-1">Free Shipping Threshold (₹)</label>
                   <input
                     type="text"
                     value={settings.free_shipping_threshold || ""}
                     onChange={(e) => setSettings({ ...settings, free_shipping_threshold: e.target.value })}
+                    placeholder="1499"
                     className="w-full rounded-lg border border-white/10 bg-black/60 p-2.5 text-white outline-none focus:border-blood"
                   />
                 </div>
@@ -657,6 +782,80 @@ function AdminSettings() {
               Update Passcode
             </button>
           </form>
+
+          {/* SMTP Email Diagnostics Card */}
+          <div className="rounded-xl border border-white/[0.08] bg-[#070707] p-6 space-y-4 font-mono text-xs">
+            <div className="flex items-center justify-between border-b border-white/10 pb-3">
+              <h3 className="font-display text-base font-bold uppercase tracking-wider text-white flex items-center gap-2">
+                <Mail className="h-4 w-4 text-blood" />
+                <span>SMTP Mail Telemetry</span>
+              </h3>
+              <span className="font-mono text-[9px] uppercase tracking-wider text-amber-400 bg-amber-400/10 border border-amber-400/30 px-2 py-0.5 rounded-full font-bold">
+                Gmail Provider
+              </span>
+            </div>
+
+            <div className="space-y-2 text-white/70">
+              <div className="flex justify-between items-center py-1 border-b border-white/5">
+                <span className="text-white/40 uppercase">Merchant User:</span>
+                <span className="text-white font-bold font-mono">detectiveszonesupport@gmail.com</span>
+              </div>
+              <div className="flex justify-between items-center py-1 border-b border-white/5">
+                <span className="text-white/40 uppercase">Server & Port:</span>
+                <span className="text-white font-mono">smtp.gmail.com : 587 (TLS)</span>
+              </div>
+              <div className="flex justify-between items-center py-1 border-b border-white/5">
+                <span className="text-white/40 uppercase">Sender Header:</span>
+                <span className="text-white font-mono">Detectives Zone</span>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleTestSmtp}
+              disabled={testingSmtp}
+              className="w-full flex items-center justify-center gap-2 rounded-lg bg-blood/20 border border-blood/50 py-2.5 font-display text-xs font-bold uppercase tracking-wider text-white hover:bg-blood hover:border-blood transition-all disabled:opacity-50 cursor-pointer shadow-[0_0_15px_rgba(179,18,23,0.2)]"
+            >
+              {testingSmtp ? (
+                <>
+                  <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                  <span>Testing SMTP Handshake...</span>
+                </>
+              ) : (
+                <>
+                  <Send className="h-3.5 w-3.5" />
+                  <span>Test SMTP Email Connection</span>
+                </>
+              )}
+            </button>
+
+            {smtpDiag && (
+              <div
+                className={`p-3.5 rounded-lg border text-xs space-y-1.5 animate-in fade-in ${
+                  smtpDiag.status === "SUCCESS"
+                    ? "border-emerald-500/40 bg-emerald-950/20 text-emerald-300"
+                    : "border-red-500/40 bg-red-950/20 text-red-300"
+                }`}
+              >
+                <div className="flex items-center gap-2 font-bold uppercase text-[11px]">
+                  {smtpDiag.status === "SUCCESS" ? (
+                    <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
+                  ) : (
+                    <AlertCircle className="h-4 w-4 text-red-400 shrink-0" />
+                  )}
+                  <span>Status: {smtpDiag.status}</span>
+                </div>
+                <p className="text-[11px] leading-relaxed font-sans text-white/90">
+                  {smtpDiag.message || smtpDiag.error}
+                </p>
+                {smtpDiag.smtp_user && (
+                  <div className="pt-2 text-[10px] text-white/50 border-t border-white/10 font-mono">
+                    User: {smtpDiag.smtp_user} | Host: {smtpDiag.smtp_host}:{smtpDiag.smtp_port}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </AdminLayout>

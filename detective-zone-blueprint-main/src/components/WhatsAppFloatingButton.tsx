@@ -18,6 +18,8 @@ export function WhatsAppFloatingButton({
   const [activeMessage, setActiveMessage] = useState<string>(
     message || "Hi Detective Zone Team, I have an inquiry."
   );
+  const [activePosition, setActivePosition] = useState<"bottom-left" | "bottom-right">(position);
+  const [isEnabled, setIsEnabled] = useState<boolean>(true);
 
   useEffect(() => {
     // If not explicitly passed as prop, load from live CMS site settings
@@ -26,6 +28,12 @@ export function WhatsAppFloatingButton({
         .getSettings()
         .then((s) => {
           if (s) {
+            if (s.whatsapp_enabled === "false" || s.whatsapp_enabled === false) {
+              setIsEnabled(false);
+            }
+            if (s.whatsapp_position === "bottom-right" || s.whatsapp_position === "bottom-left") {
+              setActivePosition(s.whatsapp_position as "bottom-left" | "bottom-right");
+            }
             if (s.whatsapp_phone_number) {
               setActiveNumber(s.whatsapp_phone_number);
             } else if (s.contact_phone) {
@@ -40,6 +48,8 @@ export function WhatsAppFloatingButton({
     }
   }, [phoneNumber]);
 
+  if (!isEnabled) return null;
+
   // Format international number (India country code 91 default if 10 digits)
   const cleanNumber = activeNumber.replace(/[^0-9]/g, "");
   const formattedNumber =
@@ -48,7 +58,7 @@ export function WhatsAppFloatingButton({
   const whatsappUrl = `https://wa.me/${formattedNumber}?text=${encodedText}`;
 
   const posClasses =
-    position === "bottom-left"
+    activePosition === "bottom-left"
       ? "bottom-6 left-6"
       : "bottom-6 right-6";
 

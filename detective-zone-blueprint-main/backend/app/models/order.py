@@ -42,6 +42,7 @@ class Order(Base):
     transaction_id = Column(String(100), unique=True, nullable=True, index=True)
     gateway_reference = Column(String(100), nullable=True)
     paid_at = Column(DateTime, nullable=True)
+    expires_at = Column(DateTime, nullable=True, index=True) # Payment session expiry timestamp (e.g. 10 mins)
     
     # Delivery & Fulfillment
     expected_delivery_date = Column(String(50), nullable=True)
@@ -62,6 +63,8 @@ class Order(Base):
     items = relationship("OrderItem", back_populates="order", cascade="all, delete-orphan")
     events = relationship("OrderEvent", back_populates="order", cascade="all, delete-orphan", order_by="OrderEvent.created_at.desc()")
     payments = relationship("Payment", back_populates="order", cascade="all, delete-orphan")
+    stock_reservations = relationship("StockReservation", back_populates="order", cascade="all, delete-orphan")
+    invoice = relationship("Invoice", back_populates="order", uselist=False, cascade="all, delete-orphan")
 
 
 class OrderItem(Base):
@@ -109,16 +112,70 @@ class Payment(Base):
     payment_method = Column(String(50), default="UPI")
     amount = Column(Float, nullable=False)
     currency = Column(String(10), default="INR")
-    status = Column(String(50), default="PENDING") # PENDING, PAYMENT_PROCESSING, SUCCESS, PAID, FAILED, EXPIRED
+    status = Column(String(50), default="PENDING", index=True) # PENDING, SUCCESS, PAID, FAILED, EXPIRED
     upi_id = Column(String(100), nullable=True) # Merchant UPI ID used
     qr_payload = Column(Text, nullable=True)
     payment_url = Column(String(500), nullable=True)
     raw_response = Column(Text, nullable=True)
     gateway_response_reference = Column(String(255), nullable=True)
+    expires_at = Column(DateTime, nullable=True, index=True)
     verified_at = Column(DateTime, nullable=True)
     paid_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     order = relationship("Order", back_populates="payments")
+
+
+class StockReservation(Base):
+    __tablename__ = "stock_reservations"
+
+    id = Column(Integer, primary_key=True, index=True)
+    order_id = Column(Integer, ForeignKey("orders.id", ondelete="CASCADE"), nullable=False, index=True)
+    product_id = Column(Integer, nullable=True, index=True)
+    quantity = Column(Integer, default=1, nullable=False)
+    status = Column(String(50), default="RESERVED", index=True) # RESERVED, SOLD, RELEASED, CANCELLED
+    expires_at = Column(DateTime, nullable=False, index=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    released_at = Column(DateTime, nullable=True)
+
+    order = relationship("Order", back_populates="stock_reservations")
+
+
+class PaymentWebhook(Base):
+    __tablename__ = "payment_webhooks"
+
+    id = Column(Integer, primary_key=True, index=True)
+    provider = Column(String(50), default="PHONEPE", index=True)
+    event_id = Column(String(100), nullable=True, index=True)
+    transaction_id = Column(String(100), nullable=True, index=True)
+    payload = Column(Text, nullable=False)
+    signature_valid = Column(Boolean, default=False)
+    processed = Column(Boolean, default=False, index=True)
+    processed_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class Invoice(Base):
+    __tablename__ = "invoices"
+
+    id = Column(Integer, primary_key=True, index=True)
+    order_id = Column(Integer, ForeignKey("orders.id", ondelete="CASCADE"), unique=True, nullable=False)
+    invoice_number = Column(String(100), unique=True, index=True, nullable=False) # e.g. "INV-2026-00125"
+    subtotal = Column(Float, nullable=False)
+    discount_amount = Column(Float, default=0.0)
+    tax_amount = Column(Float, default=0.0)
+    shipping_fee = Column(Float, default=0.0)
+    total_amount = Column(Float, nullable=False)
+    currency = Column(String(10), default="INR")
+    payment_method = Column(String(50), nullable=False)
+    transaction_id = Column(String(100), nullable=True)
+    customer_name = Column(String(255), nullable=False)
+    customer_email = Column(String(255), nullable=False)
+    customer_phone = Column(String(50), nullable=True)
+    billing_address = Column(Text, nullable=False)
+    issued_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    order = relationship("Order", back_populates="invoice")
 

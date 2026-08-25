@@ -25,6 +25,9 @@ class Case(Base):
     estimated_duration = Column(String(100), default="3–5 HOURS")
     rating = Column(Float, default=5.0)
     short_description = Column(Text, nullable=True)
+    price = Column(Float, default=999.0)
+    original_price = Column(Float, default=1499.0)
+    shipping_fee = Column(Float, default=0.0)
     
     featured = Column(Boolean, default=False)
     is_published = Column(Boolean, default=True)

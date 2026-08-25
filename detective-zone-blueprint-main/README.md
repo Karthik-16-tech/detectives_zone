@@ -278,9 +278,9 @@ WHATSAPP_PHONE_NUMBER=6305729867
 # SMTP Email
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
-SMTP_USER=pallasrikarcharan@gmail.com
+SMTP_USER=detectivezonesupport@gmail.com
 SMTP_PASSWORD=...
-SMTP_FROM_EMAIL=pallasrikarcharan@gmail.com
+SMTP_FROM_EMAIL=detectivezonesupport@gmail.com
 ```
 
 ### Running Locally

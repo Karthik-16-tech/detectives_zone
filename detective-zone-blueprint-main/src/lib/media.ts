@@ -10,6 +10,7 @@ import heroVideoLocal from "@/assets/detective-scrub-fast.mp4";
 export const S3_MEDIA = {
   // Hero section video loaded from local assets
   heroVideo: heroVideoLocal,
+  case001Video: "https://detectives-zone-media.s3.eu-north-1.amazonaws.com/Untitled+design+(6).mp4",
 
   // Global & Core Assets fetched from S3
   logo: "https://detectives-zone-media.s3.eu-north-1.amazonaws.com/logo.png",
@@ -17,6 +18,7 @@ export const S3_MEDIA = {
   noirStreet: "https://detectives-zone-media.s3.eu-north-1.amazonaws.com/noir-street.jpg",
   hqScene: "https://detectives-zone-media.s3.eu-north-1.amazonaws.com/hq-scene.jpg",
   supportScene: "https://detectives-zone-media.s3.eu-north-1.amazonaws.com/support-scene.jpg",
+  contactHero: "https://detectives-zone-media.s3.eu-north-1.amazonaws.com/ChatGPT+Image+Aug+25%2C+2026%2C+08_12_23+PM.png",
   shortVideo: "https://detectives-zone-media.s3.eu-north-1.amazonaws.com/thi_svidoe_make_it_seconds.mp4",
 
   // About Page Assets from S3

@@ -41,8 +41,9 @@ export function Navbar() {
   const scrollToSection = (id: string) => {
     closeMobile();
     if (isHomePage) {
-      if (id === "home") {
-        window.scrollTo({ top: 0, behavior: "smooth" });
+      if (id === "cases" || id === "store") {
+        const el = document.getElementById("store");
+        if (el) el.scrollIntoView({ behavior: "smooth" });
       } else {
         const el = document.getElementById(id);
         if (el) el.scrollIntoView({ behavior: "smooth" });
@@ -65,12 +66,12 @@ export function Navbar() {
       active ? "text-blood" : "text-white/55 hover:text-white"
     }`;
 
-  // Homepage links (In-page smooth navigation)
+  // Homepage links (In-page smooth navigation: Cases, Store, About, Challenge)
   const homeLinks = [
-    { id: "home", label: "Home" },
+    { id: "cases", label: "Cases" },
+    { id: "store", label: "Store" },
     { id: "about", label: "About" },
     { id: "challenge", label: "Challenge" },
-    { id: "contact", label: "Contact" },
   ];
 
   // Dashboard / General links
@@ -94,16 +95,14 @@ export function Navbar() {
         style={{
           height: 50,
           background: scrolled
-            ? "rgba(4,4,4,0.88)"
-            : "rgba(4,4,4,0.32)",
+            ? "rgba(4,4,4,0.96)"
+            : "rgba(4,4,4,0.92)",
           backdropFilter: "blur(20px)",
           WebkitBackdropFilter: "blur(20px)",
-          borderBottom: scrolled
-            ? "1px solid rgba(255,255,255,0.08)"
-            : "1px solid rgba(255,255,255,0.07)",
+          borderBottom: "1px solid rgba(255,255,255,0.08)",
         }}
       >
-        <div className="mx-auto flex h-full max-w-[1440px] items-center justify-between px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto flex h-full max-w-[1600px] items-center justify-between px-4 sm:px-6 lg:px-8">
           {/* Logo */}
           <Link to="/" className="flex shrink-0 items-center gap-3">
             <img src={logo} alt="Detective Zone logo" className="h-8 w-8 shrink-0 object-contain" />
@@ -172,10 +171,9 @@ export function Navbar() {
               <button
                 onClick={toggle}
                 aria-label={enabled ? "Turn rain off" : "Turn rain on"}
-                className="flex items-center gap-1.5 rounded-full border border-white/15 bg-white/[0.05] px-2.5 py-1 font-mono text-[9px] uppercase tracking-[0.16em] text-white/70"
+                className="flex h-9 w-9 items-center justify-center rounded-full border border-blood/60 bg-black/60 text-blood shadow-[0_0_10px_rgba(200,29,36,0.3)] transition-all hover:border-blood active:scale-95 cursor-pointer"
               >
-                {enabled ? <CloudRain className="h-3.5 w-3.5 text-blood" /> : <CloudOff className="h-3.5 w-3.5 text-white/40" />}
-                <span>{enabled ? "Rain On" : "Rain Off"}</span>
+                {enabled ? <CloudRain className="h-4 w-4 text-blood" /> : <CloudOff className="h-4 w-4 text-white/40" />}
               </button>
             )}
 

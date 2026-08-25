@@ -140,6 +140,9 @@ function AdminCaseDetail() {
         hero_video: caseData.hero_video,
         difficulty: caseData.difficulty,
         estimated_duration: caseData.estimated_duration,
+        price: isNaN(Number(caseData.price)) ? 999 : Number(caseData.price),
+        original_price: isNaN(Number(caseData.original_price)) ? 1499 : Number(caseData.original_price),
+        shipping_fee: isNaN(Number(caseData.shipping_fee)) ? 0 : Number(caseData.shipping_fee),
         status: caseData.status,
         featured: caseData.featured,
         is_published: caseData.is_published,
@@ -802,6 +805,45 @@ function AdminCaseDetail() {
                 value={caseData.subtitle || ""}
                 onChange={(e) => setCaseData({ ...caseData, subtitle: e.target.value })}
                 className="w-full rounded-lg border border-white/10 bg-[#070707] p-3 text-white font-sans text-sm focus:border-blood outline-none"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 rounded-xl border border-blood/20 bg-blood/[0.04] p-4">
+            <div>
+              <label className="block font-mono text-xs uppercase tracking-wider text-blood font-bold mb-2">
+                Sale Price (₹) *
+              </label>
+              <input
+                type="number"
+                value={caseData.price ?? ""}
+                onChange={(e) => setCaseData({ ...caseData, price: e.target.value === "" ? "" : Number(e.target.value) })}
+                placeholder="999"
+                className="w-full rounded-lg border border-blood/30 bg-black p-3 text-white font-bold text-sm focus:border-blood outline-none"
+              />
+            </div>
+            <div>
+              <label className="block font-mono text-xs uppercase tracking-wider text-white/60 mb-2">
+                Original Price (₹)
+              </label>
+              <input
+                type="number"
+                value={caseData.original_price ?? ""}
+                onChange={(e) => setCaseData({ ...caseData, original_price: e.target.value === "" ? "" : Number(e.target.value) })}
+                placeholder="1499"
+                className="w-full rounded-lg border border-white/10 bg-black p-3 text-white/70 text-sm focus:border-blood outline-none"
+              />
+            </div>
+            <div>
+              <label className="block font-mono text-xs uppercase tracking-wider text-white/60 mb-2">
+                Shipping Fee (₹)
+              </label>
+              <input
+                type="number"
+                value={caseData.shipping_fee ?? ""}
+                onChange={(e) => setCaseData({ ...caseData, shipping_fee: e.target.value === "" ? "" : Number(e.target.value) })}
+                placeholder="0 for Free Delivery"
+                className="w-full rounded-lg border border-white/10 bg-black p-3 text-white/70 text-sm focus:border-blood outline-none"
               />
             </div>
           </div>

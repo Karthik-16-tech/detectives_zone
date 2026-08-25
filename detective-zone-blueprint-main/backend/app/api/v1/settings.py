@@ -86,7 +86,7 @@ def update_upi_id(
     if setting:
         setting.value = upi_id
     else:
-        db.add(SiteSetting(key=key, value=upi_id, description="Active merchant UPI ID"))
+        db.add(SiteSetting(key="upi_id", value=upi_id, description="Active merchant UPI ID"))
 
     db.commit()
     log_admin_action(db, "UPDATE_UPI_ID", "SiteSetting", details=f"Admin changed merchant UPI ID to '{upi_id}'", admin=current_admin)

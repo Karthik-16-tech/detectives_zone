@@ -2,7 +2,11 @@ import hmac
 import hashlib
 import logging
 from typing import Optional, Dict, Any
-import razorpay
+
+try:
+    import razorpay
+except ImportError:
+    razorpay = None
 
 from app.core.config import settings
 
@@ -22,7 +26,10 @@ class RazorpayService:
         self._client = None
 
     @property
-    def client(self) -> razorpay.Client:
+    def client(self):
+        if not razorpay:
+            logger.warning("[RAZORPAY: SDK_MISSING] razorpay package not installed in environment")
+            return None
         if not self._client:
             self._client = razorpay.Client(auth=(self.key_id, self.key_secret))
         return self._client

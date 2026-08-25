@@ -5,13 +5,9 @@ const getApiBaseUrl = () => {
     return import.meta.env.VITE_API_URL;
   }
   if (typeof window !== "undefined") {
-    if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
-      return "http://127.0.0.1:8000/api/v1";
-    }
     return "/api/v1";
   }
-  // SSR fallback for Node server
-  return "http://127.0.0.1:8000/api/v1";
+  return "https://api.detectiveszone.com/api/v1";
 };
 
 const API_BASE_URL = getApiBaseUrl();

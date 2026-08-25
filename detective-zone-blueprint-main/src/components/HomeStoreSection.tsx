@@ -188,6 +188,7 @@ export function HomeStoreSection() {
             };
           });
           if (mapped.length > 0) {
+            mapped.sort((a, b) => a.id.localeCompare(b.id));
             setCasesList(mapped);
           }
         }
@@ -204,15 +205,6 @@ export function HomeStoreSection() {
   const handleNext = useCallback(() => {
     setActiveIndex((prev) => (prev === total - 1 ? 0 : prev + 1));
   }, [total]);
-
-  // Auto-play rotation smoothly paused on hover
-  useEffect(() => {
-    if (isHovered) return;
-    const interval = setInterval(() => {
-      handleNext();
-    }, 4600);
-    return () => clearInterval(interval);
-  }, [isHovered, handleNext]);
 
   // Touch Swipe Handlers
   const handleTouchStart = (e: React.TouchEvent) => {

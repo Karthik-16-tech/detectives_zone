@@ -20,9 +20,7 @@ function AdminLogin() {
   const [error, setError] = useState<string | null>(null);
 
   if (isAuthenticated) {
-    if (typeof window !== "undefined") {
-      window.location.href = "/admin";
-    }
+    navigate({ to: "/admin" });
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -32,7 +30,7 @@ function AdminLogin() {
 
     try {
       await login(username, password);
-      window.location.href = "/admin";
+      navigate({ to: "/admin" });
     } catch (err: any) {
       setError(err.message || "Failed to authenticate. Check your credentials.");
     } finally {

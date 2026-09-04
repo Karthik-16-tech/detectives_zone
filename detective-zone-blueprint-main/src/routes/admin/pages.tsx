@@ -60,8 +60,31 @@ const DEFAULT_8_MODULES: InvestigationModuleItem[] = [
   { icon: "https://detectives-zone-media.s3.eu-north-1.amazonaws.com/icons/documents-icon.png", heading: "Documents", body: "We provide confidential forensic dossier files, authentic bank statements, search warrants, and original handwritten correspondence.", pct: 40 },
   { icon: "https://detectives-zone-media.s3.eu-north-1.amazonaws.com/icons/evidence-photos-icon.png", heading: "Evidence Photos", body: "We provide high-resolution glossy crime scene polaroids, macro fingerprint lifts, ballistics captures, and suspect surveillance photographs.", pct: 50 },
   { icon: "https://detectives-zone-media.s3.eu-north-1.amazonaws.com/icons/investigative-tools-icon.png", heading: "Tools Given", body: "We provide authentic physical investigative tools including optical inspection magnifiers, fingerprint cards, and forensic loupes inside the kit.", pct: 35 },
-  { icon: "https://detectives-zone-media.s3.eu-north-1.amazonaws.com/icons/detective-notes-icon.png", heading: "Detective Notes", body: "We provide official investigator casebook worksheets, suspect motive matrices, and step-by-step procedural deduction logs to crack the case.", pct: 20 },
 ];
+
+function ensure8Modules(rawModules: any): InvestigationModuleItem[] {
+  let list = rawModules;
+  if (typeof list === "string") {
+    try {
+      list = JSON.parse(list);
+    } catch {
+      list = [];
+    }
+  }
+  if (!Array.isArray(list)) {
+    list = [];
+  }
+
+  return DEFAULT_8_MODULES.map((defaultMod, idx) => {
+    const existing = list[idx] || {};
+    return {
+      icon: existing.icon || defaultMod.icon || "",
+      heading: existing.heading || defaultMod.heading || "",
+      body: existing.body || defaultMod.body || "",
+      pct: typeof existing.pct === "number" && !isNaN(existing.pct) ? existing.pct : (defaultMod.pct ?? 50),
+    };
+  });
+}
 
 function AdminCasePagesCMS() {
   const [casesList, setCasesList] = useState<any[]>([]);
@@ -161,29 +184,7 @@ function AdminCasePagesCMS() {
 
     try {
       const pageData = await api.getCasePage(foundCase.id);
-      let loadedModules = DEFAULT_8_MODULES;
-      if (pageData && pageData.investigation_modules && pageData.investigation_modules.length >= 8) {
-        loadedModules = pageData.investigation_modules.map((m: any, idx: number) => ({
-          icon: m.icon || DEFAULT_8_MODULES[idx]?.icon || "",
-          heading: m.heading || DEFAULT_8_MODULES[idx]?.heading || "",
-          body: m.body || DEFAULT_8_MODULES[idx]?.body || "",
-          pct: m.pct !== undefined ? m.pct : (DEFAULT_8_MODULES[idx]?.pct ?? 50),
-        }));
-      } else if (pageData && pageData.investigation_modules && pageData.investigation_modules.length > 0) {
-        // Merge custom modules with standard 8
-        loadedModules = DEFAULT_8_MODULES.map((def, idx) => {
-          if (pageData.investigation_modules[idx]) {
-            return {
-              ...def,
-              icon: pageData.investigation_modules[idx].icon || def.icon,
-              heading: pageData.investigation_modules[idx].heading || def.heading,
-              body: pageData.investigation_modules[idx].body || def.body,
-              pct: pageData.investigation_modules[idx].pct ?? def.pct,
-            };
-          }
-          return def;
-        });
-      }
+      const loadedModules = ensure8Modules(pageData?.investigation_modules);
 
       if (pageData) {
         setPageContent({
@@ -277,7 +278,7 @@ function AdminCasePagesCMS() {
   // Module helper handler
   const handleUpdateModule = (index: number, field: keyof InvestigationModuleItem, value: any) => {
     setPageContent((prev) => {
-      const updated = [...prev.investigation_modules];
+      const updated = ensure8Modules(prev.investigation_modules);
       updated[index] = { ...updated[index], [field]: value };
       return { ...prev, investigation_modules: updated };
     });
@@ -643,7 +644,7 @@ function AdminCasePagesCMS() {
           <div className="flex items-center justify-between border-b border-white/10 pb-3">
             <h3 className="font-display text-base font-bold uppercase tracking-wider text-white flex items-center gap-2">
               <Layers className="h-4 w-4 text-blood" />
-              <span>4. Investigation Modules Suite ({pageContent.investigation_modules.length} Modules)</span>
+              <span>4. Investigation Modules Suite (8 Modules)</span>
             </h3>
             <button
               type="button"
@@ -655,7 +656,7 @@ function AdminCasePagesCMS() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {pageContent.investigation_modules.map((mod, idx) => {
+            {ensure8Modules(pageContent.investigation_modules).map((mod, idx) => {
               const currentIconUrl = mod.icon || DEFAULT_8_MODULES[idx]?.icon || "";
               return (
                 <div key={idx} className="rounded-xl border border-white/10 bg-black/40 p-4 space-y-3.5">

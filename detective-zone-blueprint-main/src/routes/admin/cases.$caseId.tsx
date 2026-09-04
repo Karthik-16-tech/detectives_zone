@@ -45,6 +45,30 @@ const DEFAULT_8_MODULES = [
   { icon: "https://detectives-zone-media.s3.eu-north-1.amazonaws.com/icons/detective-notes-icon.png", heading: "Detective Notes", body: "We provide official investigator casebook worksheets, suspect motive matrices, and step-by-step procedural deduction logs to crack the case.", pct: 20 },
 ];
 
+function ensure8Modules(rawModules: any) {
+  let list = rawModules;
+  if (typeof list === "string") {
+    try {
+      list = JSON.parse(list);
+    } catch {
+      list = [];
+    }
+  }
+  if (!Array.isArray(list)) {
+    list = [];
+  }
+
+  return DEFAULT_8_MODULES.map((defaultMod, idx) => {
+    const existing = list[idx] || {};
+    return {
+      icon: existing.icon || defaultMod.icon || "",
+      heading: existing.heading || defaultMod.heading || "",
+      body: existing.body || defaultMod.body || "",
+      pct: typeof existing.pct === "number" && !isNaN(existing.pct) ? existing.pct : (defaultMod.pct ?? 50),
+    };
+  });
+}
+
 export const Route = createFileRoute("/admin/cases/$caseId")({
   component: AdminCaseDetail,
 });
@@ -111,14 +135,7 @@ function AdminCaseDetail() {
           quote_text: pData.quote_text ?? "",
           quote_author: pData.quote_author ?? "",
           evidence_pins: pData.evidence_pins ?? [],
-          investigation_modules: pData.investigation_modules && pData.investigation_modules.length >= 8
-            ? pData.investigation_modules.map((m: any, idx: number) => ({
-                icon: m.icon || DEFAULT_8_MODULES[idx]?.icon || "",
-                heading: m.heading || DEFAULT_8_MODULES[idx]?.heading || "",
-                body: m.body || DEFAULT_8_MODULES[idx]?.body || "",
-                pct: m.pct !== undefined ? m.pct : (DEFAULT_8_MODULES[idx]?.pct ?? 50),
-              }))
-            : DEFAULT_8_MODULES,
+          investigation_modules: ensure8Modules(pData.investigation_modules),
         });
       }
     } catch (err: any) {
@@ -135,7 +152,10 @@ function AdminCaseDetail() {
     setSaveSuccess(false);
     try {
       const updated = await api.updateCasePage(caseData.id, pageContent);
-      setPageContent(updated);
+      setPageContent({
+        ...updated,
+        investigation_modules: ensure8Modules(updated.investigation_modules),
+      });
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 3000);
     } catch (err: any) {
@@ -143,6 +163,14 @@ function AdminCaseDetail() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleUpdateModule = (index: number, field: string, value: any) => {
+    setPageContent((prev: any) => {
+      const updated = ensure8Modules(prev.investigation_modules);
+      updated[index] = { ...updated[index], [field]: value };
+      return { ...prev, investigation_modules: updated };
+    });
   };
 
   const handleSaveOverview = async (e: React.FormEvent) => {
@@ -706,8 +734,7 @@ function AdminCaseDetail() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {Array.from({ length: 8 }, (_, idx) => {
-                const mod = pageContent.investigation_modules?.[idx] || DEFAULT_8_MODULES[idx] || { icon: "", heading: "", body: "", pct: 50 };
+              {ensure8Modules(pageContent.investigation_modules).map((mod, idx) => {
                 const currentIconUrl = mod.icon || DEFAULT_8_MODULES[idx]?.icon || "";
                 return (
                   <div key={idx} className="rounded-xl border border-white/10 bg-black/40 p-4 space-y-3.5">
@@ -719,13 +746,8 @@ function AdminCaseDetail() {
                           type="number"
                           min={0}
                           max={100}
-                          value={mod.pct ?? DEFAULT_8_MODULES[idx]?.pct ?? 50}
-                          onChange={(e) => {
-                            const updated = [...(pageContent.investigation_modules || DEFAULT_8_MODULES)];
-                            while (updated.length <= idx) updated.push({ ...DEFAULT_8_MODULES[updated.length] });
-                            updated[idx] = { ...updated[idx], pct: parseInt(e.target.value) || 0 };
-                            setPageContent({ ...pageContent, investigation_modules: updated });
-                          }}
+                          value={mod.pct ?? 50}
+                          onChange={(e) => handleUpdateModule(idx, "pct", parseInt(e.target.value) || 0)}
                           className="w-14 rounded border border-white/10 bg-black/80 px-1.5 py-0.5 text-right font-mono text-xs text-emerald-400 outline-none focus:border-blood"
                         />
                         <span className="text-[10px] text-emerald-400 font-mono">%</span>
@@ -756,10 +778,7 @@ function AdminCaseDetail() {
                             value={PRESET_MODULE_ICONS.some((p) => p.url === currentIconUrl) ? currentIconUrl : "custom"}
                             onChange={(e) => {
                               if (e.target.value !== "custom") {
-                                const updated = [...(pageContent.investigation_modules || DEFAULT_8_MODULES)];
-                                while (updated.length <= idx) updated.push({ ...DEFAULT_8_MODULES[updated.length] });
-                                updated[idx] = { ...updated[idx], icon: e.target.value };
-                                setPageContent({ ...pageContent, investigation_modules: updated });
+                                handleUpdateModule(idx, "icon", e.target.value);
                               }
                             }}
                             className="w-full rounded border border-white/10 bg-black/70 p-1.5 text-xs text-white outline-none focus:border-blood cursor-pointer"
@@ -776,23 +795,13 @@ function AdminCaseDetail() {
                             <input
                               type="text"
                               value={mod.icon || ""}
-                              onChange={(e) => {
-                                const updated = [...(pageContent.investigation_modules || DEFAULT_8_MODULES)];
-                                while (updated.length <= idx) updated.push({ ...DEFAULT_8_MODULES[updated.length] });
-                                updated[idx] = { ...updated[idx], icon: e.target.value };
-                                setPageContent({ ...pageContent, investigation_modules: updated });
-                              }}
+                              onChange={(e) => handleUpdateModule(idx, "icon", e.target.value)}
                               placeholder="Paste icon URL or upload"
                               className="flex-1 rounded border border-white/10 bg-black/70 p-1.5 text-[11px] text-white/90 font-mono outline-none focus:border-blood"
                             />
                             <ImageUploadField
                               value={mod.icon || ""}
-                              onChange={(url) => {
-                                const updated = [...(pageContent.investigation_modules || DEFAULT_8_MODULES)];
-                                while (updated.length <= idx) updated.push({ ...DEFAULT_8_MODULES[updated.length] });
-                                updated[idx] = { ...updated[idx], icon: url };
-                                setPageContent({ ...pageContent, investigation_modules: updated });
-                              }}
+                              onChange={(url) => handleUpdateModule(idx, "icon", url)}
                               folder="icons"
                               buttonText="Upload"
                               className="shrink-0"
@@ -808,12 +817,7 @@ function AdminCaseDetail() {
                       <input
                         type="text"
                         value={mod.heading || ""}
-                        onChange={(e) => {
-                          const updated = [...(pageContent.investigation_modules || DEFAULT_8_MODULES)];
-                          while (updated.length <= idx) updated.push({ ...DEFAULT_8_MODULES[updated.length] });
-                          updated[idx] = { ...updated[idx], heading: e.target.value };
-                          setPageContent({ ...pageContent, investigation_modules: updated });
-                        }}
+                        onChange={(e) => handleUpdateModule(idx, "heading", e.target.value)}
                         placeholder="e.g. Crime Scene / Autopsy Report"
                         className="w-full rounded-lg border border-white/10 bg-black/70 p-2 text-white outline-none focus:border-blood text-xs font-semibold"
                       />
@@ -825,12 +829,7 @@ function AdminCaseDetail() {
                       <textarea
                         rows={3}
                         value={mod.body || ""}
-                        onChange={(e) => {
-                          const updated = [...(pageContent.investigation_modules || DEFAULT_8_MODULES)];
-                          while (updated.length <= idx) updated.push({ ...DEFAULT_8_MODULES[updated.length] });
-                          updated[idx] = { ...updated[idx], body: e.target.value };
-                          setPageContent({ ...pageContent, investigation_modules: updated });
-                        }}
+                        onChange={(e) => handleUpdateModule(idx, "body", e.target.value)}
                         placeholder="Enter detailed description of what evidence / tools are included..."
                         className="w-full rounded-lg border border-white/10 bg-black/70 p-2 text-white/90 outline-none focus:border-blood text-xs font-sans leading-relaxed"
                       />

@@ -222,6 +222,25 @@ export interface InvestigationModulesProps {
   className?: string;
 }
 
+function renderCardIcon(IconComp: any, title: string, active: boolean) {
+  if (typeof IconComp === "function") {
+    return <IconComp className="h-full w-full object-contain" active={active} />;
+  }
+  if (typeof IconComp === "string" && IconComp.trim()) {
+    return (
+      <img
+        src={IconComp}
+        alt={title || "Module Icon"}
+        className={cn(
+          "h-full w-full object-contain transition-transform duration-300 select-none",
+          active && "scale-105"
+        )}
+      />
+    );
+  }
+  return null;
+}
+
 /**
  * HoverExpandModules - Clean Industrial Brutalist expanding cards (ZERO images, ZERO neon glow)
  */
@@ -282,7 +301,7 @@ function HoverExpandModules({
 
                     {/* Middle Interactive Icon - Background-free & borderless */}
                     <div className="h-12 w-12 sm:h-14 sm:w-14 flex items-center justify-center text-neutral-300">
-                      <IconComponent className="h-full w-full object-contain" active={false} />
+                      {renderCardIcon(IconComponent, m.title, false)}
                     </div>
 
                     {/* Vertical Rotated Title */}
@@ -326,7 +345,7 @@ function HoverExpandModules({
                     <div className="my-auto py-2 flex flex-col items-start">
                       {/* Big Background-Free Interactive Icon */}
                       <div className="h-32 w-32 sm:h-36 sm:w-36 flex items-center justify-start text-[#B31217] mb-3">
-                        <IconComponent className="h-full w-full object-contain" active={true} />
+                        {renderCardIcon(IconComponent, m.title, true)}
                       </div>
 
                       {/* Title */}

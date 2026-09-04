@@ -15,7 +15,9 @@ import {
   Shield,
   Clock,
   Sparkles,
-  Info
+  Info,
+  Upload,
+  Loader2
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { AdminLayout } from "@/components/admin/AdminLayout";
@@ -62,6 +64,17 @@ const DEFAULT_8_MODULES: InvestigationModuleItem[] = [
   { icon: "https://detectives-zone-media.s3.eu-north-1.amazonaws.com/icons/investigative-tools-icon.png", heading: "Tools Given", body: "We provide authentic physical investigative tools including optical inspection magnifiers, fingerprint cards, and forensic loupes inside the kit.", pct: 35 },
 ];
 
+function isRealImageUrl(url: any): boolean {
+  if (typeof url !== "string") return false;
+  const trimmed = url.trim();
+  return (
+    trimmed.startsWith("http://") ||
+    trimmed.startsWith("https://") ||
+    trimmed.startsWith("/") ||
+    trimmed.startsWith("data:")
+  );
+}
+
 function ensure8Modules(rawModules: any): InvestigationModuleItem[] {
   let list = rawModules;
   if (typeof list === "string") {
@@ -77,8 +90,9 @@ function ensure8Modules(rawModules: any): InvestigationModuleItem[] {
 
   return DEFAULT_8_MODULES.map((defaultMod, idx) => {
     const existing = list[idx] || {};
+    const icon = isRealImageUrl(existing.icon) ? existing.icon : defaultMod.icon;
     return {
-      icon: existing.icon || defaultMod.icon || "",
+      icon: icon || defaultMod.icon || "",
       heading: existing.heading || defaultMod.heading || "",
       body: existing.body || defaultMod.body || "",
       pct: typeof existing.pct === "number" && !isNaN(existing.pct) ? existing.pct : (defaultMod.pct ?? 50),
@@ -93,6 +107,7 @@ function AdminCasePagesCMS() {
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [uploadingIdx, setUploadingIdx] = useState<number | null>(null);
 
   // Active Case Form State
   const [caseForm, setCaseForm] = useState<{
@@ -282,6 +297,23 @@ function AdminCasePagesCMS() {
       updated[index] = { ...updated[index], [field]: value };
       return { ...prev, investigation_modules: updated };
     });
+  };
+
+  const handleUploadIcon = async (idx: number, e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingIdx(idx);
+    try {
+      const res = await api.uploadMedia(file, "icons");
+      if (res && res.file_url) {
+        handleUpdateModule(idx, "icon", res.file_url);
+      }
+    } catch (err: any) {
+      alert(err.message || "Failed to upload icon");
+    } finally {
+      setUploadingIdx(null);
+      e.target.value = "";
+    }
   };
 
   if (loading) {
@@ -677,18 +709,18 @@ function AdminCasePagesCMS() {
                   </div>
 
                   {/* Icon Selector & Preview */}
-                  <div className="space-y-1.5">
+                  <div className="space-y-2">
                     <label className="block text-[10px] font-mono uppercase text-white/60">
                       Module Icon
                     </label>
                     <div className="flex items-start gap-3">
                       {/* Icon Preview Thumbnail */}
-                      <div className="h-12 w-12 shrink-0 rounded-lg border border-white/10 bg-black/80 p-1 flex items-center justify-center overflow-hidden">
+                      <div className="h-14 w-14 shrink-0 rounded-xl border border-white/10 bg-[#141414] p-2 flex items-center justify-center overflow-hidden shadow-inner">
                         {currentIconUrl ? (
                           <img
                             src={currentIconUrl}
                             alt="Module Icon"
-                            className="h-full w-full object-contain"
+                            className="h-full w-full object-contain filter drop-shadow select-none"
                             onError={(e) => {
                               (e.target as HTMLElement).style.display = "none";
                             }}
@@ -699,7 +731,7 @@ function AdminCasePagesCMS() {
                       </div>
 
                       {/* Icon Selection & URL */}
-                      <div className="flex-1 space-y-1.5">
+                      <div className="flex-1 space-y-2">
                         <select
                           value={PRESET_MODULE_ICONS.some((p) => p.url === currentIconUrl) ? currentIconUrl : "custom"}
                           onChange={(e) => {
@@ -707,9 +739,9 @@ function AdminCasePagesCMS() {
                               handleUpdateModule(idx, "icon", e.target.value);
                             }
                           }}
-                          className="w-full rounded border border-white/10 bg-black/70 p-1.5 text-xs text-white outline-none focus:border-blood cursor-pointer"
+                          className="w-full rounded-lg border border-white/10 bg-[#0F0F0F] px-2.5 py-1.5 text-xs text-white outline-none focus:border-blood cursor-pointer"
                         >
-                          <option value="custom">-- Custom Icon URL / Upload --</option>
+                          <option value="custom">-- Custom Icon URL / Upload Below --</option>
                           {PRESET_MODULE_ICONS.map((p) => (
                             <option key={p.url} value={p.url}>
                               Preset: {p.label}
@@ -722,16 +754,24 @@ function AdminCasePagesCMS() {
                             type="text"
                             value={mod.icon || ""}
                             onChange={(e) => handleUpdateModule(idx, "icon", e.target.value)}
-                            placeholder="Paste image URL (S3, https://...) or upload"
-                            className="flex-1 rounded border border-white/10 bg-black/70 p-1.5 text-[11px] text-white/90 font-mono outline-none focus:border-blood"
+                            placeholder="https://... or select preset above"
+                            className="flex-1 rounded-lg border border-white/10 bg-[#0A0A0A] px-2.5 py-1.5 text-[11px] text-white/90 font-mono outline-none focus:border-blood"
                           />
-                          <ImageUploadField
-                            value={mod.icon || ""}
-                            onChange={(url) => handleUpdateModule(idx, "icon", url)}
-                            folder="icons"
-                            buttonText="Upload"
-                            className="shrink-0"
-                          />
+                          <label className="flex items-center gap-1.5 shrink-0 rounded-lg border border-white/10 bg-[#1A1A1A] hover:bg-[#252525] px-3 py-1.5 text-xs font-mono text-white/80 cursor-pointer transition-colors">
+                            {uploadingIdx === idx ? (
+                              <Loader2 className="h-3.5 w-3.5 text-blood animate-spin" />
+                            ) : (
+                              <Upload className="h-3.5 w-3.5 text-blood" />
+                            )}
+                            <span>{uploadingIdx === idx ? "Uploading..." : "Upload"}</span>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              disabled={uploadingIdx === idx}
+                              onChange={(e) => handleUploadIcon(idx, e)}
+                            />
+                          </label>
                         </div>
                       </div>
                     </div>

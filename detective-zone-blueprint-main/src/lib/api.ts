@@ -81,6 +81,8 @@ export async function apiRequest<T = any>(
     fetchOptions.cache = "no-store";
   }
 
+  const url = endpoint.startsWith("http") ? endpoint : `${API_BASE_URL}${endpoint.startsWith("/") ? endpoint : `/${endpoint}`}`;
+
   let response = await fetch(url, fetchOptions);
 
   // Handle Token Expiration & Refresh Flow (401 Interception)

@@ -394,8 +394,32 @@ function StorePage() {
         setLiveProducts(mapped);
       }
 
+      // Safe, robust parsing of featured kit price from settings, product catalog, or case dossiers
+      let featPrice = 1199;
+      if (sets && sets.featured_kit_price) {
+        const cleaned = String(sets.featured_kit_price).replace(/,/g, "").replace(/[^0-9.]/g, "");
+        const num = parseFloat(cleaned);
+        if (!isNaN(num) && num > 0) {
+          featPrice = num;
+        }
+      } else if (prods && prods.length > 0) {
+        const p1 = prods[0];
+        if (p1.sale_price != null && !isNaN(Number(p1.sale_price)) && Number(p1.sale_price) > 0) {
+          featPrice = Number(p1.sale_price);
+        } else if (p1.price != null && !isNaN(Number(p1.price)) && Number(p1.price) > 0) {
+          featPrice = Number(p1.price);
+        }
+      } else if (caseMap["001"]?.price) {
+        featPrice = Number(caseMap["001"].price);
+      }
+
+      // Also ensure liveProducts[0] has matching synchronized price
+      setLiveProducts((current) => {
+        if (!current || current.length === 0) return current;
+        return current.map((p, idx) => (idx === 0 ? { ...p, price: featPrice } : p));
+      });
+
       if (sets && Object.keys(sets).length > 0) {
-        const featPrice = sets.featured_kit_price ? parseFloat(sets.featured_kit_price) : (caseMap["001"]?.price ? Number(caseMap["001"].price) : 999);
         setFeaturedSettings({
           code: sets.featured_kit_code || "DZ-001",
           title: sets.featured_kit_title || "The Last Voicemail",
@@ -406,6 +430,11 @@ function StorePage() {
           level: sets.featured_kit_level || "Expert",
           image: sets.featured_kit_image && !sets.featured_kit_image.startsWith("/src") ? sets.featured_kit_image : dz001Kit,
         });
+      } else {
+        setFeaturedSettings((prev) => ({
+          ...prev,
+          price: featPrice,
+        }));
       }
     });
   }, []);
@@ -862,7 +891,7 @@ function StorePage() {
                         {/* Price */}
                         <div className="mt-8 flex items-baseline gap-3">
                           <span className="font-display text-[36px] font-bold text-white">
-                            ₹{featuredSettings.price}<span className="text-[20px] text-[#666]">/-</span>
+                            ₹{featuredSettings.price.toLocaleString("en-IN")}<span className="text-[20px] text-[#666]">/-</span>
                           </span>
                         </div>
                         <p className="mt-1 font-mono text-[10px] tracking-[0.2em] text-[#555] uppercase">
@@ -871,7 +900,15 @@ function StorePage() {
 
                         {/* CTA */}
                         <button
-                          onClick={() => addToCart(displayProducts[0])}
+                          onClick={() => {
+                            const featProd = {
+                              ...displayProducts[0],
+                              price: featuredSettings.price,
+                              title: featuredSettings.title || displayProducts[0].title,
+                              image: featuredSettings.image || displayProducts[0].image,
+                            };
+                            addToCart(featProd);
+                          }}
                           className="group/cta mt-8 flex items-center gap-3 rounded-[3px] py-3.5 px-7 font-mono text-[12px] font-bold tracking-[0.2em] uppercase transition-all duration-500 cursor-pointer w-fit"
                           style={{
                             background: "linear-gradient(135deg, #7A0F13 0%, #A11418 100%)",

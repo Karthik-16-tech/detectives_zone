@@ -6,7 +6,7 @@ const corkboard = S3_MEDIA.evidence.corkboard;
 import { EVIDENCE, EVIDENCE_LINKS } from "@/components/templates/evidence-data";
 import { EvidenceWall, type EvidencePin } from "@/components/templates/evidence-wall";
 
-const title = "Evidence Wall — Case 001 | Detective Zone";
+const title = "Evidence Wall — Case 001 | Detectives Zone";
 const description =
   "The full pinned evidence wall for Case 001, The Last Voicemail: 12 exhibits connected by red string across the corkboard.";
 

@@ -285,7 +285,7 @@ export function HomeStoreSection() {
               Choose your case file and step into a world of mystery, clues and truth.
             </p>
 
-            {/* Premium Refined Red Outlined CTA Button */}
+            {/* Premium Refined Red Outlined CTA Button — Explore Cases Only */}
             <div className="mt-7">
               <Link
                 to="/cases"

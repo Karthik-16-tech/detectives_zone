@@ -138,6 +138,14 @@ function AdminStore() {
       if (editingProduct) {
         const updated = await api.updateProduct(editingProduct.id, payload);
         setProducts(products.map((p) => (p.id === editingProduct.id ? updated : p)));
+
+        // If editing DZ-KIT-001 or Product 1, sync featured_kit_price setting & Case 1
+        if (editingProduct.id === 1 || editingProduct.sku === "DZ-KIT-001" || editingProduct.slug === "p1") {
+          const activeRate = String(parsedSalePrice ?? parsedPrice);
+          api.updateSettings({ featured_kit_price: activeRate }).catch(() => {});
+          api.updateCase(1, { price: parsedSalePrice ?? parsedPrice }).catch(() => {});
+        }
+
         showToast(`✓ "${updated.name}" updated (₹${updated.price}) — Live across store & case cards!`);
       } else {
         const created = await api.createProduct(payload);

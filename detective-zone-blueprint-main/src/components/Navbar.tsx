@@ -91,24 +91,33 @@ export function Navbar() {
   return (
     <>
       <header
-        className="fixed inset-x-0 top-0 z-50 transition-all duration-500"
+        className="fixed inset-x-0 top-0 z-50 transition-all duration-300"
         style={{
           height: 50,
           background: scrolled
             ? "rgba(4,4,4,0.96)"
-            : "rgba(4,4,4,0.92)",
+            : "rgba(4,4,4,0.90)",
           backdropFilter: "blur(20px)",
           WebkitBackdropFilter: "blur(20px)",
           borderBottom: "1px solid rgba(255,255,255,0.08)",
         }}
       >
         <div className="mx-auto flex h-full max-w-[1600px] items-center justify-between px-4 sm:px-6 lg:px-8">
-          {/* Logo */}
-          <Link to="/" className="flex shrink-0 items-center gap-3">
-            <img src={logo} alt="Detective Zone logo" className="h-8 w-8 shrink-0 object-contain" />
-            <span className="whitespace-nowrap font-display text-[14px] font-semibold uppercase tracking-[0.24em] text-white">
-              Detectives <span className="text-blood">Zone</span>
-            </span>
+          {/* Logo with compact proportions */}
+          <Link to="/" className="flex shrink-0 items-center gap-2.5 sm:gap-3 py-1 group">
+            <img 
+              src={logo} 
+              alt="Detective Zone logo" 
+              className="h-7 w-7 sm:h-8 sm:w-8 shrink-0 object-contain transition-transform duration-300 group-hover:scale-105" 
+            />
+            <div className="flex flex-col justify-center">
+              <span className="whitespace-nowrap font-display text-[13.5px] sm:text-[15px] font-bold uppercase tracking-[0.25em] text-white transition-colors duration-200 group-hover:text-white">
+                Detectives <span className="text-blood">Zone</span>
+              </span>
+              <span className="font-mono text-[7px] sm:text-[7.5px] tracking-[0.26em] text-neutral-400 uppercase leading-none mt-0.5 hidden sm:block">
+                Forensic Mystery Experiences
+              </span>
+            </div>
           </Link>
 
           {/* Desktop nav — right */}

@@ -77,13 +77,16 @@ function AdminKits() {
 
       if (settingsData && Object.keys(settingsData).length > 0) {
         // Featured Investigation
+        const cleanPrice = settingsData.featured_kit_price
+          ? String(settingsData.featured_kit_price).replace(/,/g, "").replace(/[^0-9.]/g, "")
+          : "1199";
         setFeaturedKit({
           code: settingsData.featured_kit_code || "DZ-001",
           title: settingsData.featured_kit_title || "The Last Voicemail",
           hover_title: settingsData.featured_kit_hover_title || "The Case Is Open.",
           quote: settingsData.featured_kit_quote || "A sealed case. A missing voice. Thirty pieces of evidence standing between you and the truth.",
-          price: settingsData.featured_kit_price || "999",
-          duration: settingsData.featured_kit_duration || "3–4",
+          price: cleanPrice || "1199",
+          duration: settingsData.featured_kit_duration || "2–3",
           level: settingsData.featured_kit_level || "Expert",
           image: settingsData.featured_kit_image || "https://detectives-zone-media.s3.eu-north-1.amazonaws.com/case_kits/image.png",
         });
@@ -100,16 +103,26 @@ function AdminKits() {
     e.preventDefault();
     setSavingFeatured(true);
     try {
+      const cleanPrice = String(featuredKit.price).replace(/,/g, "").replace(/[^0-9.]/g, "") || "1199";
       await api.updateSettings({
         featured_kit_code: featuredKit.code,
         featured_kit_title: featuredKit.title,
         featured_kit_hover_title: featuredKit.hover_title,
         featured_kit_quote: featuredKit.quote,
-        featured_kit_price: featuredKit.price,
+        featured_kit_price: cleanPrice,
         featured_kit_duration: featuredKit.duration,
         featured_kit_level: featuredKit.level,
         featured_kit_image: featuredKit.image,
       });
+
+      // Synchronize with Product 1 and Case 1 so all CMS views stay in unison
+      const numPrice = parseFloat(cleanPrice);
+      if (!isNaN(numPrice) && numPrice > 0) {
+        api.updateProduct(1, { price: numPrice, sale_price: numPrice }).catch(() => {});
+        api.updateCase(1, { price: numPrice }).catch(() => {});
+      }
+
+      setFeaturedKit((prev) => ({ ...prev, price: cleanPrice }));
       showToast("Featured Investigation updated live");
     } catch (err: any) {
       alert(err.message || "Failed to update Featured Investigation");

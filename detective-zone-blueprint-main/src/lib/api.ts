@@ -72,12 +72,16 @@ export async function apiRequest<T = any>(
     headers.set("Authorization", `Bearer ${token}`);
   }
 
-  const url = endpoint.startsWith("http") ? endpoint : `${API_BASE_URL}${endpoint}`;
-
-  let response = await fetch(url, {
+  const fetchOptions: RequestInit = {
     ...options,
     headers,
-  });
+  };
+
+  if (!options.cache && (options.method === "GET" || !options.method)) {
+    fetchOptions.cache = "no-store";
+  }
+
+  let response = await fetch(url, fetchOptions);
 
   // Handle Token Expiration & Refresh Flow (401 Interception)
   if (response.status === 401 && !endpoint.includes("/auth/login") && !endpoint.includes("/auth/refresh")) {

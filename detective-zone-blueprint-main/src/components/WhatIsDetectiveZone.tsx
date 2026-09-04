@@ -43,7 +43,7 @@ export function WhatIsDetectiveZone() {
           style={visible ? { animationDelay: "0.2s" } : undefined}
         >
           <p className="font-mono text-[11px] sm:text-[12px] tracking-[0.24em] text-blood uppercase font-medium">
-            // WHAT IS DETECTIVE ZONE?
+            // WHAT IS DETECTIVES ZONE?
           </p>
           <h2 className="mt-5 sm:mt-6 font-display text-[38px] sm:text-[46px] lg:text-[50px] leading-[0.92] font-black uppercase tracking-tight text-white">
             AN ARCHIVE OF

@@ -29,16 +29,27 @@ import { useEffect, useRef, useState, useMemo, useCallback } from "react";
 import { S3_MEDIA } from "@/lib/media";
 
 const detectiveHeroVideo = S3_MEDIA.heroVideo;
+const detectiveHeroPoster = (S3_MEDIA as any).heroPoster || "/detective-poster.webp";
 const caseVoicemail = S3_MEDIA.cases.caseVoicemail;
 const evidenceRoom = S3_MEDIA.evidenceRoom;
 const noirStreet = S3_MEDIA.noirStreet;
+const dz001Kit = S3_MEDIA.caseKits.dz001Kit;
+const sigAudio = S3_MEDIA.signature.audio;
+const sigCamera = S3_MEDIA.signature.camera;
+const sigFiles = S3_MEDIA.signature.files;
+const sigMobile = S3_MEDIA.signature.mobile;
+const sigPuzzle = S3_MEDIA.signature.puzzle;
+const sigTime = S3_MEDIA.signature.time;
+
 import { useRain, RainCanvas } from "@/components/RainProvider";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { ScrollReveal } from "@/components/ScrollReveal";
 import { SpotlightReveal } from "@/components/SpotlightReveal";
 import { WhatIsDetectiveZone } from "@/components/WhatIsDetectiveZone";
+import { AboutTeamSection } from "@/components/AboutTeamSection";
 import { Speakers } from "@/components/Speakers";
 import { HomeStoreSection } from "@/components/HomeStoreSection";
+import { CaseKitCards, type KitEvidenceItem } from "@/components/templates/CaseKitsEvidence";
 import { api } from "@/lib/api";
 
 export const Route = createFileRoute("/")({
@@ -442,11 +453,18 @@ function Home() {
   }, []);
 
   const [cmsSettings, setCmsSettings] = useState<Record<string, string>>({});
+  const [liveSignatures, setLiveSignatures] = useState<any[]>([]);
 
   useEffect(() => {
-    api.getSettings().then((s) => {
+    Promise.all([
+      api.getSettings().catch(() => ({})),
+      api.getSignatures().catch(() => []),
+    ]).then(([s, sigs]) => {
       if (s) setCmsSettings(s);
-    }).catch(() => {});
+      if (sigs && Array.isArray(sigs) && sigs.length > 0) {
+        setLiveSignatures(sigs);
+      }
+    });
   }, []);
 
   useEffect(() => {
@@ -454,34 +472,70 @@ function Home() {
     return () => clearInterval(t);
   }, []);
 
-  // Use local pre-bundled video for zero-latency 60fps scrubbing unless an explicit custom URL is provided
-  const activeHeroVideo =
-    cmsSettings.hero_video_url &&
-    !cmsSettings.hero_video_url.includes("detective-scrub-fast.mp4")
-      ? cmsSettings.hero_video_url
-      : detectiveHeroVideo;
+  // Active hero video URL with reliable fallback
+  const activeHeroVideo = useMemo(() => {
+    if (
+      cmsSettings.hero_video_url &&
+      !cmsSettings.hero_video_url.includes("Untitled+design")
+    ) {
+      return cmsSettings.hero_video_url;
+    }
+    return S3_MEDIA.heroVideo;
+  }, [cmsSettings.hero_video_url]);
+
+  const dz001Price = useMemo(() => {
+    if (cmsSettings.featured_kit_price) {
+      const clean = String(cmsSettings.featured_kit_price).replace(/,/g, "").replace(/[^0-9.]/g, "");
+      const n = parseFloat(clean);
+      if (!isNaN(n) && n > 0) return n;
+    }
+    return 1199;
+  }, [cmsSettings.featured_kit_price]);
 
   useEffect(() => {
     const video = videoRef.current;
+    const hero = heroRef.current;
     if (!video) return;
 
-    // Ensure video is buffered and plays continuously on page load/refresh
     video.preload = "auto";
     video.muted = true;
+    video.defaultMuted = true;
     video.playsInline = true;
     video.loop = true;
 
-    // Autoplay the video so the detective is moving immediately on page open
-    video.play().catch(() => {});
-
-    // Normalized progress 0..1
+    let isCancelled = false;
+    let blobUrl: string | null = null;
+    let isInteracting = false;
     let targetProgress = 0.5;
     let currentProgress = 0.5;
     let settled = true;
-    let didFirstMove = false;
+    let pendingSeek: number | null = null;
+
+    // Start autoplay immediately on mount
+    const startAutoplay = () => {
+      if (!isInteracting && video) {
+        video.loop = true;
+        video.play().catch(() => {});
+      }
+    };
+
+    const stopAutoplay = () => {
+      if (video) {
+        try {
+          video.pause();
+        } catch {
+          /* noop */
+        }
+      }
+    };
+
+    // Ensure immediate playback without waiting
+    startAutoplay();
 
     const onReady = () => {
-      video.play().catch(() => {});
+      if (!isInteracting) {
+        startAutoplay();
+      }
     };
 
     if (video.readyState >= 1) {
@@ -490,12 +544,33 @@ function Home() {
     video.addEventListener("loadedmetadata", onReady);
     video.addEventListener("canplay", onReady);
 
-    const seekToCurrent = () => {
-      if (!video) return;
-      const d = video.duration;
-      if (!Number.isFinite(d) || d <= 0) return;
+    // Pre-buffer video into local memory (Blob) in the background.
+    // Once buffered in RAM, seeking is 100% instant (<1ms) with zero network latency!
+    const prebufferVideo = async () => {
+      try {
+        const res = await fetch(activeHeroVideo, { mode: "cors" });
+        if (!res.ok) return;
+        const blob = await res.blob();
+        if (isCancelled || !video) return;
+        blobUrl = URL.createObjectURL(blob);
+        const currTime = video.currentTime;
+        const wasPaused = video.paused;
+        video.src = blobUrl;
+        video.currentTime = currTime;
+        if (!wasPaused && !isInteracting) {
+          video.play().catch(() => {});
+        }
+      } catch {
+        // Direct stream continues seamlessly if blob fetch is restricted
+      }
+    };
+    prebufferVideo();
 
-      const sec = Math.max(0, Math.min(d - 0.05, currentProgress * d));
+    const performSeek = (sec: number) => {
+      if (!video) return;
+      if (!video.paused) {
+        stopAutoplay();
+      }
       try {
         if ("fastSeek" in video && typeof (video as any).fastSeek === "function") {
           (video as any).fastSeek(sec);
@@ -508,40 +583,23 @@ function Home() {
     };
 
     const onSeeked = () => {
-      if (!settled) {
+      if (pendingSeek !== null) {
+        const next = pendingSeek;
+        pendingSeek = null;
+        performSeek(next);
+      } else if (isInteracting && !settled) {
         step();
       }
     };
     video.addEventListener("seeked", onSeeked);
 
-    // --- pointer handlers for desktop mouse interaction ---
-    const onMove = (e: MouseEvent | PointerEvent) => {
-      // Only scrub on desktop fine pointer devices
-      if (window.matchMedia("(pointer: fine)").matches) {
-        if (!didFirstMove) {
-          didFirstMove = true;
-          try {
-            video.pause();
-          } catch {
-            /* noop */
-          }
-          const d = video.duration;
-          if (Number.isFinite(d) && d > 0) {
-            currentProgress = Math.max(0, Math.min(1, video.currentTime / d));
-          }
-        }
-        targetProgress = Math.max(0, Math.min(1, 1 - e.clientX / window.innerWidth));
-        settled = false;
-      }
-    };
-
-    // --- rAF loop with smooth lerping ---
+    // Smooth rAF lerp loop
     let raf = 0;
-    const LERP = 0.15;
-    const DEAD_ZONE = 0.002;
+    const LERP = 0.18;
+    const DEAD_ZONE = 0.001;
 
     const step = () => {
-      if (settled || (video && video.seeking)) return;
+      if (!isInteracting || settled) return;
 
       const diff = targetProgress - currentProgress;
       if (Math.abs(diff) < DEAD_ZONE) {
@@ -550,26 +608,134 @@ function Home() {
       } else {
         currentProgress += diff * LERP;
       }
-      seekToCurrent();
+
+      const d = video.duration;
+      if (Number.isFinite(d) && d > 0) {
+        const sec = Math.max(0, Math.min(d - 0.04, currentProgress * d));
+        if (video.seeking) {
+          pendingSeek = sec;
+        } else {
+          performSeek(sec);
+        }
+      }
     };
 
     const loop = () => {
       raf = requestAnimationFrame(loop);
       step();
     };
-
     raf = requestAnimationFrame(loop);
+
+    const isInsideHero = (clientX: number, clientY: number) => {
+      if (!hero) return true;
+      const rect = hero.getBoundingClientRect();
+      return (
+        clientX >= rect.left &&
+        clientX <= rect.right &&
+        clientY >= rect.top &&
+        clientY <= rect.bottom
+      );
+    };
+
+    const onMove = (e: MouseEvent | PointerEvent) => {
+      if (!window.matchMedia("(pointer: fine)").matches) return;
+
+      const inside = isInsideHero(e.clientX, e.clientY);
+
+      if (inside) {
+        if (!isInteracting) {
+          isInteracting = true;
+          stopAutoplay();
+          const d = video.duration;
+          if (Number.isFinite(d) && d > 0) {
+            currentProgress = Math.max(0, Math.min(1, video.currentTime / d));
+          }
+        }
+        targetProgress = Math.max(0, Math.min(1, 1 - e.clientX / window.innerWidth));
+        settled = false;
+      } else if (isInteracting) {
+        isInteracting = false;
+        settled = true;
+        pendingSeek = null;
+        startAutoplay();
+      }
+    };
+
+    const onHeroLeave = () => {
+      if (isInteracting) {
+        isInteracting = false;
+        settled = true;
+        pendingSeek = null;
+        startAutoplay();
+      }
+    };
+
+    const onTouchStart = (e: TouchEvent) => {
+      if (e.touches?.[0]) {
+        isInteracting = true;
+        stopAutoplay();
+        const d = video.duration;
+        if (Number.isFinite(d) && d > 0) {
+          currentProgress = Math.max(0, Math.min(1, video.currentTime / d));
+        }
+        targetProgress = Math.max(0, Math.min(1, 1 - e.touches[0].clientX / window.innerWidth));
+        settled = false;
+      }
+    };
+
+    const onTouchMove = (e: TouchEvent) => {
+      if (e.touches?.[0]) {
+        if (!isInteracting) {
+          isInteracting = true;
+          stopAutoplay();
+        }
+        targetProgress = Math.max(0, Math.min(1, 1 - e.touches[0].clientX / window.innerWidth));
+        settled = false;
+      }
+    };
+
+    const onTouchEnd = () => {
+      if (isInteracting) {
+        isInteracting = false;
+        settled = true;
+        pendingSeek = null;
+        startAutoplay();
+      }
+    };
 
     window.addEventListener("pointermove", onMove, { passive: true });
     window.addEventListener("mousemove", onMove, { passive: true });
+    document.addEventListener("mouseleave", onHeroLeave);
+
+    if (hero) {
+      hero.addEventListener("mouseleave", onHeroLeave);
+      hero.addEventListener("pointerleave", onHeroLeave);
+      hero.addEventListener("touchstart", onTouchStart, { passive: true });
+      hero.addEventListener("touchmove", onTouchMove, { passive: true });
+      hero.addEventListener("touchend", onTouchEnd, { passive: true });
+      hero.addEventListener("touchcancel", onTouchEnd, { passive: true });
+    }
 
     return () => {
+      isCancelled = true;
       cancelAnimationFrame(raf);
+      if (blobUrl) {
+        URL.revokeObjectURL(blobUrl);
+      }
       video.removeEventListener("loadedmetadata", onReady);
       video.removeEventListener("canplay", onReady);
       video.removeEventListener("seeked", onSeeked);
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("mousemove", onMove);
+      document.removeEventListener("mouseleave", onHeroLeave);
+      if (hero) {
+        hero.removeEventListener("mouseleave", onHeroLeave);
+        hero.removeEventListener("pointerleave", onHeroLeave);
+        hero.removeEventListener("touchstart", onTouchStart);
+        hero.removeEventListener("touchmove", onTouchMove);
+        hero.removeEventListener("touchend", onTouchEnd);
+        hero.removeEventListener("touchcancel", onTouchEnd);
+      }
     };
   }, [activeHeroVideo]);
 
@@ -585,12 +751,13 @@ function Home() {
       <section
         id="home"
         ref={heroRef}
-        className="relative mt-[50px] h-[calc(100svh-50px)] w-full overflow-hidden bg-black text-neutral-100 select-none flex flex-col justify-between"
+        className="relative mt-[50px] h-[calc(100svh-50px)] min-h-[560px] sm:min-h-[600px] max-h-[1000px] w-full overflow-hidden bg-black text-neutral-100 select-none flex flex-col justify-between"
       >
         {/* Background Video (Seamless cinematic fit across mobile, tablet, and slightly zoomed desktop) */}
         <video
           ref={videoRef}
           src={activeHeroVideo}
+          poster={detectiveHeroPoster}
           autoPlay
           muted
           loop
@@ -599,8 +766,19 @@ function Home() {
           controlsList="nodownload"
           disablePictureInPicture
           aria-hidden="true"
-          className="absolute inset-0 m-auto h-full w-full min-w-full min-h-full pointer-events-none z-0 object-cover object-[68%_22%] md:object-[80%_20%] lg:min-w-0 lg:min-h-0 lg:object-contain lg:scale-[1.08] lg:translate-x-[7%] lg:-translate-y-[2%]"
-        />
+          onError={() => {
+            const video = videoRef.current;
+            if (video && video.src !== S3_MEDIA.heroVideoFallback) {
+              video.src = S3_MEDIA.heroVideoFallback;
+              video.load();
+              video.play().catch(() => {});
+            }
+          }}
+          className="absolute inset-0 m-auto h-full w-full min-w-full min-h-full pointer-events-none z-0 object-cover object-[70%_25%] sm:object-[75%_25%] md:object-[80%_20%] lg:min-w-0 lg:min-h-0 lg:object-contain lg:scale-[1.08] lg:translate-x-[7%] lg:-translate-y-[2%]"
+        >
+          <source src={activeHeroVideo} type="video/mp4" />
+          <source src={S3_MEDIA.heroVideoFallback} type="video/mp4" />
+        </video>
 
         {/* Rain and Atmosphere overlays */}
         <RainCanvas enabled={enabled} />
@@ -613,38 +791,66 @@ function Home() {
           className="pointer-events-none absolute inset-0"
           style={{
             background: isMobile
-              ? "linear-gradient(90deg, rgba(2,2,2,0.82) 18%, rgba(2,2,2,0.35) 44%, transparent 70%), linear-gradient(0deg, rgba(2,2,2,0.7) 0%, transparent 22%)"
+              ? "linear-gradient(180deg, rgba(2,2,2,0.92) 0%, rgba(2,2,2,0.65) 45%, rgba(2,2,2,0.95) 100%), linear-gradient(90deg, rgba(2,2,2,0.96) 0%, rgba(2,2,2,0.82) 55%, rgba(2,2,2,0.3) 100%)"
               : "radial-gradient(60% 55% at 50% 50%, rgba(179,18,23,0.12), transparent 70%), linear-gradient(90deg, #020202 18%, rgba(5,5,5,0.65) 45%, rgba(5,5,5,0.2) 70%, #020202 95%), linear-gradient(0deg, #020202 10%, transparent 40%)",
           }}
         />
 
-        {/* Left heading & Action CTA */}
-        <div className="pointer-events-none absolute inset-0 mx-auto max-w-[1600px] px-6 sm:px-10 lg:px-12 flex items-center justify-between">
-          <div className="pointer-events-auto w-[85%] sm:w-[65%] lg:w-[50%] max-w-[540px] rise">
+        {/* Left heading & Action CTA - balanced vertical placement with mobile bottom clearance */}
+        <div className="pointer-events-none absolute inset-0 mx-auto max-w-[1600px] px-5 sm:px-10 lg:px-12 flex items-center justify-between -translate-y-3 sm:-translate-y-5 lg:-translate-y-6 pb-14 sm:pb-0">
+          <div className="pointer-events-auto w-full sm:w-[85%] md:w-[75%] lg:w-[50%] max-w-[560px] rise flex flex-col items-start gap-3 sm:gap-3.5">
+            {/* Noir / 01 Badge */}
             <div className="flex items-center gap-3">
               <span className="h-px w-8 sm:w-10 bg-blood" />
               <Fingerprint className="h-4 w-4 sm:h-5 sm:w-5 text-blood" />
-              <span className="font-mono text-[9px] tracking-[0.35em] text-blood uppercase font-medium">Noir / 01</span>
+              <span className="font-mono text-[9px] sm:text-[10px] tracking-[0.35em] text-blood uppercase font-medium">Noir / 01</span>
             </div>
+            
+            {/* Title */}
             <h1
-              className="mt-5 sm:mt-6 font-display font-bold tracking-[-0.02em] uppercase"
-              style={{ fontSize: isMobile ? "clamp(36px, 9.2vw, 52px)" : "clamp(52px, 5.8vw, 84px)", lineHeight: isMobile ? 0.95 : 0.9 }}
+              className="font-display font-black tracking-[-0.02em] uppercase leading-none"
+              style={{ fontSize: isMobile ? "clamp(40px, 10.5vw, 58px)" : "clamp(60px, 6.4vw, 90px)", lineHeight: 0.88 }}
             >
               <span className="block text-foreground">Detectives</span>
-              <span className="block text-blood">Zone</span>
+              <span className="block text-blood mt-1 sm:mt-1.5">Zone</span>
             </h1>
-            <span className="mt-4 sm:mt-5 block h-[3px] w-[40px] sm:w-[54px] bg-blood" />
 
+            {/* Tagline directly below title - Sleek and compact */}
+            <div className="flex items-center gap-1.5 font-mono text-[10px] sm:text-[11.5px] font-semibold tracking-[0.28em] uppercase text-neutral-300">
+              <span>Investigate</span>
+              <span className="text-blood font-bold text-xs leading-none select-none">.</span>
+              <span>Solve</span>
+              <span className="text-blood font-bold text-xs leading-none select-none">.</span>
+              <span>Uncover</span>
+              <span className="text-blood font-bold text-xs leading-none select-none">.</span>
+            </div>
+
+            {/* Real-World Mystery Cases - Precision Industrial Telemetry */}
+            <div className="max-w-[540px]">
+              <p className="font-mono text-[11px] sm:text-[12px] text-neutral-400 font-normal tracking-wide">
+                Real-world mystery cases. Delivered to your door.
+              </p>
+            </div>
+
+            {/* CTA Button - Interactive Explore Cases with Subtle Noir Hover Sheen & Micro-animations */}
             <Link
               to="/cases"
               onPointerDown={(e) => e.stopPropagation()}
-              className="group relative mt-7 sm:mt-8 flex items-center justify-center gap-2.5 overflow-hidden bg-blood font-display text-[11px] font-semibold tracking-[0.2em] uppercase transition-all duration-300 hover:scale-[1.03]"
-              style={{ width: isMobile ? 180 : 196, height: isMobile ? 44 : 46 }}
+              className="group relative mt-1 sm:mt-2 inline-flex items-center justify-center gap-2.5 overflow-hidden rounded-md border border-white/15 bg-blood px-7 py-3 sm:py-3.5 font-display text-[11px] sm:text-[12px] font-bold tracking-[0.22em] uppercase text-white shadow-[0_0_20px_rgba(211,47,47,0.35)] transition-all duration-300 hover:scale-[1.02] hover:shadow-[0_0_30px_rgba(211,47,47,0.6)] hover:border-white/30 hover:bg-[#b71c1c] active:scale-[0.98] active:bg-[#9a0f13]"
             >
-              <span className="absolute inset-0 origin-left scale-x-0 bg-foreground/10 transition-transform duration-500 group-hover:scale-x-100" />
-              <Fingerprint className="relative h-3.5 w-3.5" />
-              <span className="relative">Explore Cases</span>
-              <ArrowRight className="relative h-3.5 w-3.5 -translate-x-1.5 opacity-0 transition-all duration-300 group-hover:translate-x-0 group-hover:opacity-100" />
+              {/* Subtle sweeping light sheen bar */}
+              <span 
+                aria-hidden="true" 
+                className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent transition-transform duration-700 ease-out group-hover:translate-x-full" 
+              />
+              {/* Micro-tilting Fingerprint Icon */}
+              <Fingerprint className="relative z-10 h-4 w-4 text-white/95 transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-6" />
+              {/* Micro-expanding Letter Spacing Label */}
+              <span className="relative z-10 transition-[letter-spacing] duration-300 group-hover:tracking-[0.26em]">
+                Explore Cases
+              </span>
+              {/* Sliding Interactive Arrow */}
+              <ArrowRight className="relative z-10 h-3.5 w-3.5 text-white/90 -translate-x-1 opacity-70 transition-all duration-300 group-hover:translate-x-0.5 group-hover:opacity-100" />
             </Link>
           </div>
         </div>
@@ -663,33 +869,177 @@ function Home() {
         <HomeStoreSection />
       </ScrollReveal>
 
+      {/* CASE KITS & SIGNATURE MODULES — Featured Dossier Left + Clue Artifacts Below */}
+      <ScrollReveal>
+        <section className="relative py-14 sm:py-20 bg-[#040404] text-white border-t border-white/10">
+          <div className="mx-auto max-w-[1400px] px-4 sm:px-8">
+            {/* Section divider */}
+            <div className="flex items-center gap-4 mb-10">
+              <div className="h-px flex-1 bg-gradient-to-r from-transparent via-[#C81D24]/30 to-transparent" />
+              <span className="font-mono text-[10px] sm:text-[11px] tracking-[0.3em] text-[#C81D24] uppercase font-semibold">
+                Case Kits Content — Physical Dossier Box
+              </span>
+              <div className="h-px flex-1 bg-gradient-to-r from-transparent via-[#C81D24]/30 to-transparent" />
+            </div>
+
+            {/* Main DZ-001 Featured Investigation: Left Image + Right Info */}
+            <div className="flex flex-col lg:flex-row gap-10 lg:gap-16 items-start">
+              {/* LEFT: Relevant Case Kit Image & Cinematic Scanline */}
+              <div
+                className="relative w-full lg:w-[54%] xl:w-[52%] overflow-hidden rounded-sm border border-[#C81D24]/20 bg-[#080808] group"
+              >
+                <div
+                  className="absolute inset-0 z-10 pointer-events-none opacity-[0.04]"
+                  style={{
+                    backgroundImage:
+                      "url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMDAiIGhlaWdodD0iMzAwIj48ZmlsdGVyIGlkPSJhIiB4PSIwIiB5PSIwIj48ZmVUdXJidWxlbmNlIGJhc2VGcmVxdWVuY3k9Ii43NSIgc3RpdGNoVGlsZXM9InN0aXRjaCIgdHlwZT0iZnJhY3RhbE5vaXNlIi8+PGZlQ29sb3JNYXRyaXggdHlwZT0ic2F0dXJhdGUiIHZhbHVlcz0iMCIvPjwvZmlsdGVyPjxyZWN0IHdpZHRoPSIzMDAiIGhlaWdodD0iMzAwIiBmaWx0ZXI9InVybCgjYSkiIG9wYWNpdHk9IjAuMDUiLz48L3N2Zz4=')",
+                  }}
+                />
+
+                <img
+                  src={dz001Kit}
+                  alt="Case 001 — The Last Voicemail Physical Kit"
+                  className="w-full h-auto object-contain transition-transform duration-700 ease-out group-hover:scale-[1.02]"
+                />
+
+                {/* Status Badge */}
+                <span className="absolute top-4 left-4 z-20 inline-flex items-center gap-1.5 rounded-sm px-2.5 py-1 font-mono text-[8.5px] font-bold uppercase tracking-[0.2em] border border-[#C81D24]/60 bg-black/90 text-[#FF4A50]">
+                  <span className="h-1.5 w-1.5 rounded-full bg-[#C81D24] animate-pulse" />
+                  Official Investigation Box
+                </span>
+
+                <div className="absolute bottom-0 left-0 right-0 h-16 z-10 pointer-events-none bg-gradient-to-t from-[#040404] to-transparent" />
+              </div>
+
+              {/* RIGHT: Editorial Case Kit Breakdown */}
+              <div className="w-full lg:w-[46%] xl:w-[48%] flex flex-col justify-center">
+                <div className="flex items-center gap-3 mb-3">
+                  <span className="font-mono text-[13px] tracking-[0.3em] text-[#C81D24] font-bold">
+                    DZ-001
+                  </span>
+                  <div className="h-px w-8 bg-[#C81D24]/40" />
+                  <span className="font-mono text-[9px] tracking-[0.2em] text-[#888] uppercase">
+                    Official Case Kit
+                  </span>
+                </div>
+
+                <h3 className="font-display text-[32px] sm:text-[40px] xl:text-[46px] tracking-[0.04em] uppercase text-white leading-[0.95]">
+                  The Last Voicemail
+                </h3>
+
+                <p className="mt-4 text-[14px] sm:text-[15px] leading-[1.7] text-[#888] font-sans italic max-w-md">
+                  "A sealed case. A missing voice. Thirty pieces of tangible physical evidence standing between you and the truth."
+                </p>
+
+                {/* Metadata tags */}
+                <div className="mt-6 flex flex-wrap gap-6 text-[12px] font-mono text-[#aaa] tracking-[0.15em] uppercase border-y border-white/5 py-4">
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-[#C81D24] text-[18px] font-bold">01</span>
+                    <span className="text-[10px] text-[#555]">Case File</span>
+                  </div>
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-[#C81D24] text-[18px] font-bold">2–3</span>
+                    <span className="text-[10px] text-[#555]">Hours</span>
+                  </div>
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-[#C81D24] text-[18px] font-bold">Hard</span>
+                    <span className="text-[10px] text-[#555]">Difficulty</span>
+                  </div>
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-[#4ade80] text-[18px] font-bold">Free</span>
+                    <span className="text-[10px] text-[#555]">Delivery</span>
+                  </div>
+                </div>
+
+                {/* Price & Order Action */}
+                <div className="mt-6 flex flex-wrap items-baseline gap-3">
+                  <span className="font-display text-[34px] sm:text-[38px] font-bold text-white">
+                    ₹{dz001Price.toLocaleString("en-IN")}<span className="text-[18px] text-[#666]">/-</span>
+                  </span>
+                  <span className="font-mono text-[14px] text-white/30 line-through">₹{Math.round(dz001Price * 1.25).toLocaleString("en-IN")}</span>
+                  <span className="font-mono text-[9px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded">
+                    20% OFF
+                  </span>
+                </div>
+
+                <div className="mt-6 flex flex-wrap items-center gap-3">
+                  <Link
+                    to="/cases/001"
+                    className="group inline-flex items-center gap-3 rounded-sm bg-[#B31217] hover:bg-[#8B1116] text-white px-7 py-3 font-mono text-[11px] font-bold uppercase tracking-[0.2em] shadow-[0_4px_20px_rgba(179,18,23,0.4)] transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
+                  >
+                    <span>Inspect Case 001</span>
+                    <ArrowRight className="h-3.5 w-3.5 transition-transform duration-300 group-hover:translate-x-1" />
+                  </Link>
+
+                  <Link
+                    to="/cases"
+                    className="inline-flex items-center gap-2 rounded-sm border border-white/15 bg-white/5 hover:border-white/30 px-5 py-3 font-mono text-[10.5px] uppercase tracking-[0.16em] text-neutral-300 hover:text-white transition-colors"
+                  >
+                    <span>All Cases</span>
+                  </Link>
+                </div>
+
+                {/* What's in this box list */}
+                <div className="mt-8 border-t border-white/5 pt-5">
+                  <span className="font-mono text-[9px] uppercase tracking-[0.24em] text-[#666] block mb-3">
+                    Box Specifications:
+                  </span>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[10px] font-mono uppercase tracking-wider text-neutral-400">
+                    <span className="flex items-center gap-2">
+                      <span className="h-1 w-1 rounded-full bg-[#C81D24]" />
+                      30+ Physical Documents
+                    </span>
+                    <span className="flex items-center gap-2">
+                      <span className="h-1 w-1 rounded-full bg-[#C81D24]" />
+                      Audio Voicemail QR Tape
+                    </span>
+                    <span className="flex items-center gap-2">
+                      <span className="h-1 w-1 rounded-full bg-[#C81D24]" />
+                      Coroner Toxicology Report
+                    </span>
+                    <span className="flex items-center gap-2">
+                      <span className="h-1 w-1 rounded-full bg-[#C81D24]" />
+                      Sealed Solution Envelope
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Signature Evidence Clues Carousel — Hover Animation */}
+            <div className="mt-14 pt-8 border-t border-white/5">
+              <CaseKitCards
+                sectionTitle="Case Kits Content — Hover To Inspect Evidence Clues"
+                kits={[
+                  {
+                    id: "kit-featured",
+                    code: "DZ-001",
+                    name: "The Signature Collection",
+                    tagline: "The complete archive. Flagship evidence, forensic artifacts and clues.",
+                    image: dz001Kit,
+                    badge: "OFFICIAL ARTIFACTS",
+                    price: 1199,
+                    originalPrice: 1501,
+                    casesIncluded: 1,
+                    itemsInBox: 6,
+                    save: 302,
+                    box: [],
+                    cases: [
+                      { number: "CASE 001", title: "The Last Voicemail", difficulty: "Hard" },
+                    ],
+                  },
+                ]}
+                signatures={liveSignatures}
+                images={[sigAudio, sigCamera, sigFiles, sigMobile, sigPuzzle, sigTime, dz001Kit]}
+              />
+            </div>
+          </div>
+        </section>
+      </ScrollReveal>
+
       {/* STRIP — EvidenceCard paper-clip style */}
       <ScrollReveal>
         <section className="shell mt-30">
-          <style>{`
-            @keyframes dz-ch-float {
-              0%   { transform: translateY(0)  scale(1);   opacity: .15; }
-              100% { transform: translateY(-18px) scale(1.5); opacity: .05; }
-            }
-            @keyframes dz-ch-shake {
-              0%,100%{transform:translateX(0)}
-              15%{transform:translateX(-8px)}
-              30%{transform:translateX(8px)}
-              45%{transform:translateX(-6px)}
-              60%{transform:translateX(6px)}
-              75%{transform:translateX(-3px)}
-              90%{transform:translateX(3px)}
-            }
-            @keyframes dz-ch-pulse-border {
-              0%,100%{box-shadow:0 0 0 0 rgba(211,47,47,0.4)}
-              50%{box-shadow:0 0 0 10px rgba(211,47,47,0)}
-            }
-            @keyframes dz-ch-stamp-drop {
-              0%{transform:scale(2.5) rotate(-12deg);opacity:0}
-              60%{transform:scale(0.92) rotate(3deg);opacity:1}
-              100%{transform:scale(1) rotate(0deg);opacity:1}
-            }
-          `}          </style>
           <p className="caption text-blood" style={{ marginBottom: 28 }}>// Field Protocol — Investigation Methodology</p>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-2 pb-10">
             {([
@@ -769,55 +1119,11 @@ function Home() {
         </section>
       </ScrollReveal>
 
-      {/* ABOUT — scrolls below the hero */}
-      <ScrollReveal>
-        <section id="about" className="shell mt-20 sm:mt-28 lg:mt-32 scroll-mt-[64px]">
-          <div className="flex flex-col lg:grid lg:grid-cols-12 lg:items-center gap-8 lg:gap-12">
-            <div className="w-full lg:col-span-5">
-              <p className="font-mono text-[11px] sm:text-[12px] tracking-[0.24em] text-blood uppercase font-medium">
-                // ABOUT — AGENCY ORIGIN & MISSION
-              </p>
-              <h2 className="mt-5 sm:mt-6 font-display text-[40px] sm:text-[46px] lg:text-[50px] leading-[0.92] font-black uppercase tracking-tight text-white">
-                {cmsSettings.about_heading || (
-                  <>
-                    EVERY SHADOW
-                    <br />
-                    HAS A STORY
-                  </>
-                )}
-              </h2>
-              <div className="mt-5 sm:mt-6 max-w-lg space-y-4 text-[14px] sm:text-[15px] leading-relaxed text-white/75">
-                <p>
-                  Detective Zone creates immersive, cinematic mystery cases where you become the detective and uncover the truth through clues, evidence, and deduction.
-                </p>
-                <p className="font-bold text-white tracking-wide">
-                  Observe. Investigate. Connect the clues. Solve the case.
-                </p>
-              </div>
-              <div className="mt-7 sm:mt-9">
-                <Link
-                  to="/about"
-                  className="group inline-flex items-center justify-between sm:justify-start gap-4 border border-white/20 bg-black/40 backdrop-blur px-6 font-mono text-[11px] sm:text-[12px] tracking-[0.24em] uppercase text-white transition-all duration-300 hover:border-blood hover:bg-blood/10 w-full sm:w-auto h-[50px] sm:h-[54px]"
-                >
-                  <span>OPEN THE BRIEFING</span>
-                  <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
-                </Link>
-              </div>
-            </div>
-            <div className="w-full lg:col-span-7 mt-2 sm:mt-4 lg:mt-0">
-              <img
-                src={cmsSettings.about_image || noirStreet}
-                alt="Rain-soaked noir street at night"
-                loading="lazy"
-                className="h-[360px] sm:h-[420px] lg:h-[440px] w-full rounded-[6px] sm:rounded-[12px] object-cover grayscale contrast-110 shadow-2xl"
-              />
-            </div>
-          </div>
-        </section>
-      </ScrollReveal>
-
-      {/* WHAT IS DETECTIVE ZONE — below "Every shadow has a story", above challenge */}
+      {/* WHAT IS DETECTIVES ZONE */}
       <WhatIsDetectiveZone />
+
+      {/* TEAM & BEHIND-THE-SCENES FORENSIC EXPERIENCE */}
+      <AboutTeamSection />
 
       {/* TESTIMONIALS / AGENT DOSSIERS */}
       <Speakers />

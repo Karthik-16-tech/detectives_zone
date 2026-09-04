@@ -88,16 +88,17 @@ export function CaseKitsEvidence() {
   );
 }
 
-/* ─── case kit cards — hover showcase ─── */
 export function CaseKitCards({
   kits,
   images = [],
   signatures = [],
+  sectionTitle = "Case Archive — Hover To Open",
   onAdd,
 }: {
   kits: KitEvidenceItem[];
   images?: string[];
   signatures?: any[];
+  sectionTitle?: string;
   onAdd?: (kit: KitEvidenceItem) => void;
 }) {
   if (kits.length === 0) return null;
@@ -149,7 +150,7 @@ export function CaseKitCards({
       <div className="mx-auto flex max-w-[1400px] items-center gap-4 px-4 sm:px-8">
         <div className="h-px flex-1 bg-gradient-to-r from-transparent via-[#C81D24]/30 to-transparent" />
         <span className="font-mono text-[10px] tracking-[0.3em] text-[#C81D24]/60 uppercase">
-          Case Archive — Hover To Open
+          {sectionTitle}
         </span>
         <div className="h-px flex-1 bg-gradient-to-r from-transparent via-[#C81D24]/30 to-transparent" />
       </div>

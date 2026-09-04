@@ -84,7 +84,7 @@ export function EncryptedPanel() {
   const copy = (
     <div className="space-y-2.5">
       <p className="font-mono text-[12px] sm:text-[13px] leading-[1.8] tracking-wide text-white font-medium">
-        In Detective Zone, evidence is not always enough.
+        In Detectives Zone, evidence is not always enough.
       </p>
       <p className="font-mono text-[12px] sm:text-[13px] leading-[1.8] tracking-wide text-white font-medium">
         Sometimes, the absence of evidence hides the loudest truths.

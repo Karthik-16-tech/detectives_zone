@@ -17,10 +17,33 @@ import {
   ExternalLink,
   CheckCircle2,
   AlertCircle,
+  Layers,
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { ImageUploadField } from "@/components/admin/ImageUploadField";
+
+const PRESET_MODULE_ICONS = [
+  { label: "Crime Scene Clapper", url: "https://detectives-zone-media.s3.eu-north-1.amazonaws.com/icons/crime-scene-clapper.png" },
+  { label: "Autopsy Report", url: "https://detectives-zone-media.s3.eu-north-1.amazonaws.com/icons/autopsy-report-icon.png" },
+  { label: "Witness Statements", url: "https://detectives-zone-media.s3.eu-north-1.amazonaws.com/icons/witness-statements-icon.png" },
+  { label: "Digital Evidence", url: "https://detectives-zone-media.s3.eu-north-1.amazonaws.com/icons/digital-evidence-icon.png" },
+  { label: "Documents", url: "https://detectives-zone-media.s3.eu-north-1.amazonaws.com/icons/documents-icon.png" },
+  { label: "Evidence Photos", url: "https://detectives-zone-media.s3.eu-north-1.amazonaws.com/icons/evidence-photos-icon.png" },
+  { label: "Investigative Tools", url: "https://detectives-zone-media.s3.eu-north-1.amazonaws.com/icons/investigative-tools-icon.png" },
+  { label: "Detective Notes", url: "https://detectives-zone-media.s3.eu-north-1.amazonaws.com/icons/detective-notes-icon.png" },
+];
+
+const DEFAULT_8_MODULES = [
+  { icon: "https://detectives-zone-media.s3.eu-north-1.amazonaws.com/icons/crime-scene-clapper.png", heading: "Crime Scene", body: "We provide a secure Drive link inside the kit containing full crime scene video files and authentic audio recordings to explore the scene.", pct: 75 },
+  { icon: "https://detectives-zone-media.s3.eu-north-1.amazonaws.com/icons/autopsy-report-icon.png", heading: "Autopsy Report", body: "We provide official sealed coroner reports, toxicological blood panels, and trauma anatomical diagrams to establish time and cause of death.", pct: 60 },
+  { icon: "https://detectives-zone-media.s3.eu-north-1.amazonaws.com/icons/witness-statements-icon.png", heading: "Witness Statements", body: "We provide verbatim police interrogation transcripts, signed eyewitness affidavits, and suspect alibi logs to detect lies and contradictions.", pct: 45 },
+  { icon: "https://detectives-zone-media.s3.eu-north-1.amazonaws.com/icons/digital-evidence-icon.png", heading: "Digital Evidence", body: "We provide extracted suspect phone records, encrypted chat histories, cell tower triangulation logs, and surveillance CCTV footage.", pct: 30 },
+  { icon: "https://detectives-zone-media.s3.eu-north-1.amazonaws.com/icons/documents-icon.png", heading: "Documents", body: "We provide confidential forensic dossier files, authentic bank statements, search warrants, and original handwritten correspondence.", pct: 40 },
+  { icon: "https://detectives-zone-media.s3.eu-north-1.amazonaws.com/icons/evidence-photos-icon.png", heading: "Evidence Photos", body: "We provide high-resolution glossy crime scene polaroids, macro fingerprint lifts, ballistics captures, and suspect surveillance photographs.", pct: 50 },
+  { icon: "https://detectives-zone-media.s3.eu-north-1.amazonaws.com/icons/investigative-tools-icon.png", heading: "Tools Given", body: "We provide authentic physical investigative tools including optical inspection magnifiers, fingerprint cards, and forensic loupes inside the kit.", pct: 35 },
+  { icon: "https://detectives-zone-media.s3.eu-north-1.amazonaws.com/icons/detective-notes-icon.png", heading: "Detective Notes", body: "We provide official investigator casebook worksheets, suspect motive matrices, and step-by-step procedural deduction logs to crack the case.", pct: 20 },
+];
 
 export const Route = createFileRoute("/admin/cases/$caseId")({
   component: AdminCaseDetail,
@@ -40,11 +63,7 @@ function AdminCaseDetail() {
     quote_text: "The voicemail wasn't a confession. It was a warning.",
     quote_author: "Detective Varma · Lead Investigator",
     evidence_pins: [],
-    investigation_modules: [
-      { icon: "Users", heading: "Unravel the Suspect Matrix", body: "Cross-examine 5 distinct persons of interest." },
-      { icon: "FolderSearch", heading: "Analyze Crime Scene Evidence", body: "Examine high-resolution forensic photographs." },
-      { icon: "Terminal", heading: "Decode Encrypted Files", body: "Access restricted police databases." }
-    ]
+    investigation_modules: DEFAULT_8_MODULES,
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -92,11 +111,14 @@ function AdminCaseDetail() {
           quote_text: pData.quote_text ?? "",
           quote_author: pData.quote_author ?? "",
           evidence_pins: pData.evidence_pins ?? [],
-          investigation_modules: pData.investigation_modules && pData.investigation_modules.length > 0 ? pData.investigation_modules : [
-            { icon: "Users", heading: "Unravel the Suspect Matrix", body: "Cross-examine 5 distinct persons of interest." },
-            { icon: "FolderSearch", heading: "Analyze Crime Scene Evidence", body: "Examine high-resolution forensic photographs." },
-            { icon: "Terminal", heading: "Decode Encrypted Files", body: "Access restricted police databases." }
-          ]
+          investigation_modules: pData.investigation_modules && pData.investigation_modules.length >= 8
+            ? pData.investigation_modules.map((m: any, idx: number) => ({
+                icon: m.icon || DEFAULT_8_MODULES[idx]?.icon || "",
+                heading: m.heading || DEFAULT_8_MODULES[idx]?.heading || "",
+                body: m.body || DEFAULT_8_MODULES[idx]?.body || "",
+                pct: m.pct !== undefined ? m.pct : (DEFAULT_8_MODULES[idx]?.pct ?? 50),
+              }))
+            : DEFAULT_8_MODULES,
         });
       }
     } catch (err: any) {
@@ -652,64 +674,165 @@ function AdminCaseDetail() {
             </div>
           </div>
 
-          {/* Section 3: Investigation Modules (3 Cards) */}
+          {/* Section 3: Investigation Modules Suite (8 Modules) */}
           <div className="rounded-2xl border border-white/10 bg-[#070707] p-6 space-y-6">
             <div className="flex items-center justify-between border-b border-white/10 pb-4">
               <div>
                 <h3 className="font-display text-lg font-bold uppercase tracking-wider text-white flex items-center gap-2">
-                  <FileText className="h-5 w-5 text-blood" />
-                  <span>Investigation Modules (3 Feature Cards)</span>
+                  <Layers className="h-5 w-5 text-blood" />
+                  <span>Investigation Modules Suite ({pageContent.investigation_modules?.length || 8} Modules)</span>
                 </h3>
                 <p className="font-sans text-xs text-white/50 mt-1">
-                  Customize the 3 interactive case dossiers / investigation gameplay mechanics.
+                  Configure the 8 bespoke evidence modules, icons, descriptions, and forensic depth meters.
                 </p>
               </div>
-              <button
-                type="submit"
-                disabled={saving}
-                className="flex items-center gap-2 rounded-lg bg-blood px-4 py-2 font-display text-xs font-semibold uppercase tracking-wider text-white hover:bg-blood/90 disabled:opacity-50 cursor-pointer"
-              >
-                <Save className="h-4 w-4" />
-                <span>Save Modules</span>
-              </button>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setPageContent({ ...pageContent, investigation_modules: DEFAULT_8_MODULES })}
+                  className="font-mono text-xs text-white/50 hover:text-white underline cursor-pointer"
+                >
+                  Reset to Standard 8
+                </button>
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="flex items-center gap-2 rounded-lg bg-blood px-4 py-2 font-display text-xs font-semibold uppercase tracking-wider text-white hover:bg-blood/90 disabled:opacity-50 cursor-pointer"
+                >
+                  <Save className="h-4 w-4" />
+                  <span>Save Modules</span>
+                </button>
+              </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {[0, 1, 2].map((idx) => {
-                const mod = pageContent.investigation_modules?.[idx] || { icon: "Users", heading: "", body: "" };
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {Array.from({ length: 8 }, (_, idx) => {
+                const mod = pageContent.investigation_modules?.[idx] || DEFAULT_8_MODULES[idx] || { icon: "", heading: "", body: "", pct: 50 };
+                const currentIconUrl = mod.icon || DEFAULT_8_MODULES[idx]?.icon || "";
                 return (
-                  <div key={idx} className="rounded-xl border border-white/10 bg-black/40 p-4 space-y-3">
-                    <span className="font-mono text-[11px] text-blood font-bold uppercase">
-                      Module #{idx + 1}
-                    </span>
+                  <div key={idx} className="rounded-xl border border-white/10 bg-black/40 p-4 space-y-3.5">
+                    <div className="flex items-center justify-between font-mono text-xs text-white/60 pb-2 border-b border-white/5">
+                      <span className="text-blood font-bold tracking-wider">Module 0{idx + 1}</span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[10px] text-white/40 uppercase">Depth:</span>
+                        <input
+                          type="number"
+                          min={0}
+                          max={100}
+                          value={mod.pct ?? DEFAULT_8_MODULES[idx]?.pct ?? 50}
+                          onChange={(e) => {
+                            const updated = [...(pageContent.investigation_modules || DEFAULT_8_MODULES)];
+                            while (updated.length <= idx) updated.push({ ...DEFAULT_8_MODULES[updated.length] });
+                            updated[idx] = { ...updated[idx], pct: parseInt(e.target.value) || 0 };
+                            setPageContent({ ...pageContent, investigation_modules: updated });
+                          }}
+                          className="w-14 rounded border border-white/10 bg-black/80 px-1.5 py-0.5 text-right font-mono text-xs text-emerald-400 outline-none focus:border-blood"
+                        />
+                        <span className="text-[10px] text-emerald-400 font-mono">%</span>
+                      </div>
+                    </div>
+
+                    {/* Icon Selector & Preview */}
+                    <div className="space-y-1.5">
+                      <label className="block text-[10px] font-mono uppercase text-white/60">Module Icon</label>
+                      <div className="flex items-start gap-3">
+                        <div className="h-12 w-12 shrink-0 rounded-lg border border-white/10 bg-black/80 p-1 flex items-center justify-center overflow-hidden">
+                          {currentIconUrl ? (
+                            <img
+                              src={currentIconUrl}
+                              alt="Module Icon"
+                              className="h-full w-full object-contain"
+                              onError={(e) => {
+                                (e.target as HTMLElement).style.display = "none";
+                              }}
+                            />
+                          ) : (
+                            <Layers className="h-5 w-5 text-white/30" />
+                          )}
+                        </div>
+
+                        <div className="flex-1 space-y-1.5">
+                          <select
+                            value={PRESET_MODULE_ICONS.some((p) => p.url === currentIconUrl) ? currentIconUrl : "custom"}
+                            onChange={(e) => {
+                              if (e.target.value !== "custom") {
+                                const updated = [...(pageContent.investigation_modules || DEFAULT_8_MODULES)];
+                                while (updated.length <= idx) updated.push({ ...DEFAULT_8_MODULES[updated.length] });
+                                updated[idx] = { ...updated[idx], icon: e.target.value };
+                                setPageContent({ ...pageContent, investigation_modules: updated });
+                              }
+                            }}
+                            className="w-full rounded border border-white/10 bg-black/70 p-1.5 text-xs text-white outline-none focus:border-blood cursor-pointer"
+                          >
+                            <option value="custom">-- Custom Icon URL / Upload --</option>
+                            {PRESET_MODULE_ICONS.map((p) => (
+                              <option key={p.url} value={p.url}>
+                                Preset: {p.label}
+                              </option>
+                            ))}
+                          </select>
+
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="text"
+                              value={mod.icon || ""}
+                              onChange={(e) => {
+                                const updated = [...(pageContent.investigation_modules || DEFAULT_8_MODULES)];
+                                while (updated.length <= idx) updated.push({ ...DEFAULT_8_MODULES[updated.length] });
+                                updated[idx] = { ...updated[idx], icon: e.target.value };
+                                setPageContent({ ...pageContent, investigation_modules: updated });
+                              }}
+                              placeholder="Paste icon URL or upload"
+                              className="flex-1 rounded border border-white/10 bg-black/70 p-1.5 text-[11px] text-white/90 font-mono outline-none focus:border-blood"
+                            />
+                            <ImageUploadField
+                              value={mod.icon || ""}
+                              onChange={(url) => {
+                                const updated = [...(pageContent.investigation_modules || DEFAULT_8_MODULES)];
+                                while (updated.length <= idx) updated.push({ ...DEFAULT_8_MODULES[updated.length] });
+                                updated[idx] = { ...updated[idx], icon: url };
+                                setPageContent({ ...pageContent, investigation_modules: updated });
+                              }}
+                              folder="icons"
+                              buttonText="Upload"
+                              className="shrink-0"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Module Title */}
                     <div>
-                      <label className="block text-[10px] font-mono uppercase text-white/50 mb-1">Heading</label>
+                      <label className="block text-[10px] font-mono uppercase text-white/60 mb-1">Module Title</label>
                       <input
                         type="text"
                         value={mod.heading || ""}
                         onChange={(e) => {
-                          const updated = [...(pageContent.investigation_modules || [])];
-                          while (updated.length <= idx) updated.push({ icon: "Users", heading: "", body: "" });
+                          const updated = [...(pageContent.investigation_modules || DEFAULT_8_MODULES)];
+                          while (updated.length <= idx) updated.push({ ...DEFAULT_8_MODULES[updated.length] });
                           updated[idx] = { ...updated[idx], heading: e.target.value };
                           setPageContent({ ...pageContent, investigation_modules: updated });
                         }}
-                        placeholder="e.g. Unravel the Suspect Matrix"
-                        className="w-full rounded border border-white/10 bg-black p-2 text-xs text-white font-display font-semibold uppercase outline-none focus:border-blood"
+                        placeholder="e.g. Crime Scene / Autopsy Report"
+                        className="w-full rounded-lg border border-white/10 bg-black/70 p-2 text-white outline-none focus:border-blood text-xs font-semibold"
                       />
                     </div>
+
+                    {/* Module Description */}
                     <div>
-                      <label className="block text-[10px] font-mono uppercase text-white/50 mb-1">Description</label>
+                      <label className="block text-[10px] font-mono uppercase text-white/60 mb-1">Module Description</label>
                       <textarea
-                        rows={4}
+                        rows={3}
                         value={mod.body || ""}
                         onChange={(e) => {
-                          const updated = [...(pageContent.investigation_modules || [])];
-                          while (updated.length <= idx) updated.push({ icon: "Users", heading: "", body: "" });
+                          const updated = [...(pageContent.investigation_modules || DEFAULT_8_MODULES)];
+                          while (updated.length <= idx) updated.push({ ...DEFAULT_8_MODULES[updated.length] });
                           updated[idx] = { ...updated[idx], body: e.target.value };
                           setPageContent({ ...pageContent, investigation_modules: updated });
                         }}
-                        placeholder="Module briefing narrative..."
-                        className="w-full rounded border border-white/10 bg-black p-2 text-xs text-white/80 font-sans outline-none focus:border-blood"
+                        placeholder="Enter detailed description of what evidence / tools are included..."
+                        className="w-full rounded-lg border border-white/10 bg-black/70 p-2 text-white/90 outline-none focus:border-blood text-xs font-sans leading-relaxed"
                       />
                     </div>
                   </div>

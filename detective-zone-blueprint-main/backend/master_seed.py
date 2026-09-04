@@ -226,14 +226,14 @@ def master_seed():
                     {"id": "report", "x": 80, "y": 68, "label": "Forensic Report", "note": "Traces of digitalis found in the whiskey glass.", "image_url": "https://detectives-zone-media.s3.eu-north-1.amazonaws.com/evidence/e-06.jpg", "links": []}
                 ],
                 "investigation_modules": [
-                    {"icon": "PersonStanding", "heading": "Crime Scene", "body": "Explore the scene", "pct": 75},
-                    {"icon": "FileText", "heading": "Autopsy Report", "body": "Medical examination findings", "pct": 60},
-                    {"icon": "MessagesSquare", "heading": "Witness Statements", "body": "Interviews and testimonies", "pct": 45},
-                    {"icon": "Monitor", "heading": "Digital Evidence", "body": "Devices, calls and digital clues", "pct": 30},
-                    {"icon": "Folder", "heading": "Documents", "body": "Letters, reports and files", "pct": 40},
-                    {"icon": "Camera", "heading": "Evidence Photos", "body": "Images and photographs", "pct": 50},
-                    {"icon": "Share2", "heading": "Timeline", "body": "Reconstruct the sequence", "pct": 35},
-                    {"icon": "Notebook", "heading": "Detective Notes", "body": "Your notes and deductions", "pct": 20}
+                    {"icon": "PersonStanding", "heading": "Crime Scene", "body": "We provide a secure Drive link inside the kit containing full crime scene video files and authentic audio recordings to explore the scene.", "pct": 75},
+                    {"icon": "FileText", "heading": "Autopsy Report", "body": "We provide official sealed coroner reports, toxicological blood panels, and trauma anatomical diagrams to establish time and cause of death.", "pct": 60},
+                    {"icon": "MessagesSquare", "heading": "Witness Statements", "body": "We provide verbatim police interrogation transcripts, signed eyewitness affidavits, and suspect alibi logs to detect lies and contradictions.", "pct": 45},
+                    {"icon": "Monitor", "heading": "Digital Evidence", "body": "We provide extracted suspect phone records, encrypted chat histories, cell tower triangulation logs, and surveillance CCTV footage.", "pct": 30},
+                    {"icon": "Folder", "heading": "Documents", "body": "We provide confidential forensic dossier files, authentic bank statements, search warrants, and original handwritten correspondence.", "pct": 40},
+                    {"icon": "Camera", "heading": "Evidence Photos", "body": "We provide high-resolution glossy crime scene polaroids, macro fingerprint lifts, ballistics captures, and suspect surveillance photographs.", "pct": 50},
+                    {"icon": "Wrench", "heading": "Tools Given", "body": "We provide authentic physical investigative tools including optical inspection magnifiers, fingerprint cards, and forensic loupes inside the kit.", "pct": 35},
+                    {"icon": "Notebook", "heading": "Detective Notes", "body": "We provide official investigator casebook worksheets, suspect motive matrices, and step-by-step procedural deduction logs to crack the case.", "pct": 20}
                 ]
             },
             "002": {

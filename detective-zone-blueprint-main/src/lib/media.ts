@@ -5,11 +5,14 @@
  * - All Other Media: Fetched directly from the AWS S3 bucket URLs.
  */
 
-import heroVideoLocal from "@/assets/detective-scrub-fast.mp4";
-
 export const S3_MEDIA = {
-  // Hero section video loaded from local assets
-  heroVideo: heroVideoLocal,
+  // Hero section video and poster:
+  // Primary: High-speed cloud CDN on AWS S3 + backend upload fallback
+  heroVideo: "https://detectives-zone-media.s3.eu-north-1.amazonaws.com/detective-scrub-fast.mp4",
+  heroVideoFallback: "https://api.detectiveszone.com/uploads/hero/52ed80bc1a4b_detective-scrub-fast.mp4",
+  heroVideoLocal: "/detective-scrub-fast.mp4",
+  heroPoster: "https://api.detectiveszone.com/uploads/hero/df33b893238b_detective-poster.webp",
+  heroPosterFallback: "https://detectives-zone-media.s3.eu-north-1.amazonaws.com/noir-street.jpg",
   case001Video: "https://detectives-zone-media.s3.eu-north-1.amazonaws.com/Untitled+design+(6).mp4",
 
   // Global & Core Assets fetched from S3
@@ -79,6 +82,17 @@ export const S3_MEDIA = {
     mobile: "https://detectives-zone-media.s3.eu-north-1.amazonaws.com/signature/mobile.png",
     puzzle: "https://detectives-zone-media.s3.eu-north-1.amazonaws.com/signature/puzzle.png",
     time: "https://detectives-zone-media.s3.eu-north-1.amazonaws.com/signature/time.png",
+  },
+  // Investigation Module Icons from S3
+  moduleIcons: {
+    crimeScene: "https://detectives-zone-media.s3.eu-north-1.amazonaws.com/icons/crime-scene-clapper.png",
+    autopsyReport: "https://detectives-zone-media.s3.eu-north-1.amazonaws.com/icons/autopsy-report-icon.png",
+    witnessStatements: "https://detectives-zone-media.s3.eu-north-1.amazonaws.com/icons/witness-statements-icon.png",
+    digitalEvidence: "https://detectives-zone-media.s3.eu-north-1.amazonaws.com/icons/digital-evidence-icon.png",
+    documents: "https://detectives-zone-media.s3.eu-north-1.amazonaws.com/icons/documents-icon.png",
+    evidencePhotos: "https://detectives-zone-media.s3.eu-north-1.amazonaws.com/icons/evidence-photos-icon.png",
+    toolsGiven: "https://detectives-zone-media.s3.eu-north-1.amazonaws.com/icons/investigative-tools-icon.png",
+    detectiveNotes: "https://detectives-zone-media.s3.eu-north-1.amazonaws.com/icons/detective-notes-icon.png",
   },
 };
 

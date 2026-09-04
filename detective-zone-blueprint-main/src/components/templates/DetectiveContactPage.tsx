@@ -1498,7 +1498,7 @@ export default function DetectiveContactPage({ embedded = false }: { embedded?: 
           <div className="dz-footbar">
             <div className="dz-wrap dz-footbarin">
               <p className="dz-mono" style={{ fontSize: 11, color: "var(--muted)" }}>
-                © 2026 Detective Zone. All Rights Reserved.
+                © 2026 Detectives Zone. All Rights Reserved.
               </p>
               <p
                 className="dz-mono"

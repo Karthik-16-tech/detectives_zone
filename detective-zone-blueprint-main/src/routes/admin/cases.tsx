@@ -193,6 +193,14 @@ function AdminCases() {
         is_published: editingCase.is_published,
       });
       setCases(cases.map((c) => (c.id === updated.id ? updated : c)));
+
+      // If Case 001 is updated, sync featured_kit_price setting & Product 1
+      if (updated.id === 1 || updated.case_number === "001" || updated.slug === "the-last-voicemail") {
+        const casePrice = isNaN(Number(editingCase.price)) ? 999 : Number(editingCase.price);
+        api.updateSettings({ featured_kit_price: String(casePrice) }).catch(() => {});
+        api.updateProduct(1, { price: casePrice, sale_price: casePrice }).catch(() => {});
+      }
+
       setEditingCase(null);
       showToast("Case card updated live");
     } catch (err: any) {

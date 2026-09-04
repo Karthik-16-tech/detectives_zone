@@ -41,15 +41,26 @@ interface InvestigationModuleItem {
   pct?: number;
 }
 
+export const PRESET_MODULE_ICONS = [
+  { label: "Crime Scene Clapper", url: "https://detectives-zone-media.s3.eu-north-1.amazonaws.com/icons/crime-scene-clapper.png" },
+  { label: "Autopsy Report", url: "https://detectives-zone-media.s3.eu-north-1.amazonaws.com/icons/autopsy-report-icon.png" },
+  { label: "Witness Statements", url: "https://detectives-zone-media.s3.eu-north-1.amazonaws.com/icons/witness-statements-icon.png" },
+  { label: "Digital Evidence", url: "https://detectives-zone-media.s3.eu-north-1.amazonaws.com/icons/digital-evidence-icon.png" },
+  { label: "Documents", url: "https://detectives-zone-media.s3.eu-north-1.amazonaws.com/icons/documents-icon.png" },
+  { label: "Evidence Photos", url: "https://detectives-zone-media.s3.eu-north-1.amazonaws.com/icons/evidence-photos-icon.png" },
+  { label: "Investigative Tools", url: "https://detectives-zone-media.s3.eu-north-1.amazonaws.com/icons/investigative-tools-icon.png" },
+  { label: "Detective Notes", url: "https://detectives-zone-media.s3.eu-north-1.amazonaws.com/icons/detective-notes-icon.png" },
+];
+
 const DEFAULT_8_MODULES: InvestigationModuleItem[] = [
-  { icon: "PersonStanding", heading: "Crime Scene", body: "Explore the scene", pct: 75 },
-  { icon: "FileText", heading: "Autopsy Report", body: "Medical examination findings", pct: 60 },
-  { icon: "MessagesSquare", heading: "Witness Statements", body: "Interviews and testimonies", pct: 45 },
-  { icon: "Monitor", heading: "Digital Evidence", body: "Devices, calls and digital clues", pct: 30 },
-  { icon: "Folder", heading: "Documents", body: "Letters, reports and files", pct: 40 },
-  { icon: "Camera", heading: "Evidence Photos", body: "Images and photographs", pct: 50 },
-  { icon: "Share2", heading: "Timeline", body: "Reconstruct the sequence", pct: 35 },
-  { icon: "Notebook", heading: "Detective Notes", body: "Your notes and deductions", pct: 20 },
+  { icon: "https://detectives-zone-media.s3.eu-north-1.amazonaws.com/icons/crime-scene-clapper.png", heading: "Crime Scene", body: "We provide a secure Drive link inside the kit containing full crime scene video files and authentic audio recordings to explore the scene.", pct: 75 },
+  { icon: "https://detectives-zone-media.s3.eu-north-1.amazonaws.com/icons/autopsy-report-icon.png", heading: "Autopsy Report", body: "We provide official sealed coroner reports, toxicological blood panels, and trauma anatomical diagrams to establish time and cause of death.", pct: 60 },
+  { icon: "https://detectives-zone-media.s3.eu-north-1.amazonaws.com/icons/witness-statements-icon.png", heading: "Witness Statements", body: "We provide verbatim police interrogation transcripts, signed eyewitness affidavits, and suspect alibi logs to detect lies and contradictions.", pct: 45 },
+  { icon: "https://detectives-zone-media.s3.eu-north-1.amazonaws.com/icons/digital-evidence-icon.png", heading: "Digital Evidence", body: "We provide extracted suspect phone records, encrypted chat histories, cell tower triangulation logs, and surveillance CCTV footage.", pct: 30 },
+  { icon: "https://detectives-zone-media.s3.eu-north-1.amazonaws.com/icons/documents-icon.png", heading: "Documents", body: "We provide confidential forensic dossier files, authentic bank statements, search warrants, and original handwritten correspondence.", pct: 40 },
+  { icon: "https://detectives-zone-media.s3.eu-north-1.amazonaws.com/icons/evidence-photos-icon.png", heading: "Evidence Photos", body: "We provide high-resolution glossy crime scene polaroids, macro fingerprint lifts, ballistics captures, and suspect surveillance photographs.", pct: 50 },
+  { icon: "https://detectives-zone-media.s3.eu-north-1.amazonaws.com/icons/investigative-tools-icon.png", heading: "Tools Given", body: "We provide authentic physical investigative tools including optical inspection magnifiers, fingerprint cards, and forensic loupes inside the kit.", pct: 35 },
+  { icon: "https://detectives-zone-media.s3.eu-north-1.amazonaws.com/icons/detective-notes-icon.png", heading: "Detective Notes", body: "We provide official investigator casebook worksheets, suspect motive matrices, and step-by-step procedural deduction logs to crack the case.", pct: 20 },
 ];
 
 function AdminCasePagesCMS() {
@@ -152,13 +163,19 @@ function AdminCasePagesCMS() {
       const pageData = await api.getCasePage(foundCase.id);
       let loadedModules = DEFAULT_8_MODULES;
       if (pageData && pageData.investigation_modules && pageData.investigation_modules.length >= 8) {
-        loadedModules = pageData.investigation_modules;
+        loadedModules = pageData.investigation_modules.map((m: any, idx: number) => ({
+          icon: m.icon || DEFAULT_8_MODULES[idx]?.icon || "",
+          heading: m.heading || DEFAULT_8_MODULES[idx]?.heading || "",
+          body: m.body || DEFAULT_8_MODULES[idx]?.body || "",
+          pct: m.pct !== undefined ? m.pct : (DEFAULT_8_MODULES[idx]?.pct ?? 50),
+        }));
       } else if (pageData && pageData.investigation_modules && pageData.investigation_modules.length > 0) {
         // Merge custom modules with standard 8
         loadedModules = DEFAULT_8_MODULES.map((def, idx) => {
           if (pageData.investigation_modules[idx]) {
             return {
               ...def,
+              icon: pageData.investigation_modules[idx].icon || def.icon,
               heading: pageData.investigation_modules[idx].heading || def.heading,
               body: pageData.investigation_modules[idx].body || def.body,
               pct: pageData.investigation_modules[idx].pct ?? def.pct,
@@ -638,48 +655,117 @@ function AdminCasePagesCMS() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {pageContent.investigation_modules.map((mod, idx) => (
-              <div key={idx} className="rounded-xl border border-white/10 bg-black/40 p-4 space-y-3">
-                <div className="flex items-center justify-between font-mono text-xs text-white/60">
-                  <span className="text-blood font-bold">Module 0{idx + 1}</span>
-                  <div className="flex items-center gap-1">
-                    <span className="text-[10px] text-white/40">Progress:</span>
-                    <input
-                      type="number"
-                      min={0}
-                      max={100}
-                      value={mod.pct ?? 50}
-                      onChange={(e) => handleUpdateModule(idx, "pct", parseInt(e.target.value) || 0)}
-                      className="w-14 rounded border border-white/10 bg-black/80 px-1.5 py-0.5 text-right font-mono text-xs text-emerald-400 outline-none focus:border-blood"
-                    />
-                    <span className="text-[10px] text-emerald-400">%</span>
+            {pageContent.investigation_modules.map((mod, idx) => {
+              const currentIconUrl = mod.icon || DEFAULT_8_MODULES[idx]?.icon || "";
+              return (
+                <div key={idx} className="rounded-xl border border-white/10 bg-black/40 p-4 space-y-3.5">
+                  <div className="flex items-center justify-between font-mono text-xs text-white/60 pb-2 border-b border-white/5">
+                    <span className="text-blood font-bold tracking-wider">Module 0{idx + 1}</span>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[10px] text-white/40 uppercase">Depth:</span>
+                      <input
+                        type="number"
+                        min={0}
+                        max={100}
+                        value={mod.pct ?? 50}
+                        onChange={(e) => handleUpdateModule(idx, "pct", parseInt(e.target.value) || 0)}
+                        className="w-14 rounded border border-white/10 bg-black/80 px-1.5 py-0.5 text-right font-mono text-xs text-emerald-400 outline-none focus:border-blood"
+                      />
+                      <span className="text-[10px] text-emerald-400 font-mono">%</span>
+                    </div>
                   </div>
-                </div>
 
-                <div className="space-y-2">
+                  {/* Icon Selector & Preview */}
+                  <div className="space-y-1.5">
+                    <label className="block text-[10px] font-mono uppercase text-white/60">
+                      Module Icon
+                    </label>
+                    <div className="flex items-start gap-3">
+                      {/* Icon Preview Thumbnail */}
+                      <div className="h-12 w-12 shrink-0 rounded-lg border border-white/10 bg-black/80 p-1 flex items-center justify-center overflow-hidden">
+                        {currentIconUrl ? (
+                          <img
+                            src={currentIconUrl}
+                            alt="Module Icon"
+                            className="h-full w-full object-contain"
+                            onError={(e) => {
+                              (e.target as HTMLElement).style.display = "none";
+                            }}
+                          />
+                        ) : (
+                          <Layers className="h-5 w-5 text-white/30" />
+                        )}
+                      </div>
+
+                      {/* Icon Selection & URL */}
+                      <div className="flex-1 space-y-1.5">
+                        <select
+                          value={PRESET_MODULE_ICONS.some((p) => p.url === currentIconUrl) ? currentIconUrl : "custom"}
+                          onChange={(e) => {
+                            if (e.target.value !== "custom") {
+                              handleUpdateModule(idx, "icon", e.target.value);
+                            }
+                          }}
+                          className="w-full rounded border border-white/10 bg-black/70 p-1.5 text-xs text-white outline-none focus:border-blood cursor-pointer"
+                        >
+                          <option value="custom">-- Custom Icon URL / Upload --</option>
+                          {PRESET_MODULE_ICONS.map((p) => (
+                            <option key={p.url} value={p.url}>
+                              Preset: {p.label}
+                            </option>
+                          ))}
+                        </select>
+
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="text"
+                            value={mod.icon || ""}
+                            onChange={(e) => handleUpdateModule(idx, "icon", e.target.value)}
+                            placeholder="Paste image URL (S3, https://...) or upload"
+                            className="flex-1 rounded border border-white/10 bg-black/70 p-1.5 text-[11px] text-white/90 font-mono outline-none focus:border-blood"
+                          />
+                          <ImageUploadField
+                            value={mod.icon || ""}
+                            onChange={(url) => handleUpdateModule(idx, "icon", url)}
+                            folder="icons"
+                            buttonText="Upload"
+                            className="shrink-0"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Module Title */}
                   <div>
-                    <label className="block text-[10px] font-mono uppercase text-white/50 mb-1">Module Title</label>
+                    <label className="block text-[10px] font-mono uppercase text-white/60 mb-1">
+                      Module Title
+                    </label>
                     <input
                       type="text"
                       value={mod.heading}
                       onChange={(e) => handleUpdateModule(idx, "heading", e.target.value)}
-                      placeholder="Crime Scene / Autopsy Report"
+                      placeholder="e.g. Crime Scene / Autopsy Report"
                       className="w-full rounded-lg border border-white/10 bg-black/70 p-2 text-white outline-none focus:border-blood text-xs font-semibold"
                     />
                   </div>
+
+                  {/* Module Description Textarea */}
                   <div>
-                    <label className="block text-[10px] font-mono uppercase text-white/50 mb-1">Module Subtitle / Desc</label>
-                    <input
-                      type="text"
+                    <label className="block text-[10px] font-mono uppercase text-white/60 mb-1">
+                      Module Description
+                    </label>
+                    <textarea
+                      rows={3}
                       value={mod.body}
                       onChange={(e) => handleUpdateModule(idx, "body", e.target.value)}
-                      placeholder="Explore the scene..."
-                      className="w-full rounded-lg border border-white/10 bg-black/70 p-2 text-white outline-none focus:border-blood text-xs"
+                      placeholder="Enter detailed description of what evidence / tools are included..."
+                      className="w-full rounded-lg border border-white/10 bg-black/70 p-2 text-white/90 outline-none focus:border-blood text-xs font-sans leading-relaxed"
                     />
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 

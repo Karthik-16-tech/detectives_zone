@@ -335,10 +335,9 @@ function AdminWhatsAppPanel() {
                 }`}
               >
                 <div
-                  className="flex h-10 w-10 items-center justify-center rounded-full text-white shadow-lg cursor-pointer transition-transform hover:scale-110"
-                  style={{ backgroundColor: "#25D366" }}
+                  className="flex h-10 w-10 items-center justify-center rounded-full bg-black border border-[#25D366]/40 text-[#25D366] shadow-[0_4px_16px_rgba(0,0,0,0.9)] cursor-pointer transition-transform hover:scale-105"
                 >
-                  <MessageCircle className="h-5 w-5 text-white" />
+                  <MessageCircle className="h-5 w-5 text-[#25D366]" />
                 </div>
               </div>
             </div>

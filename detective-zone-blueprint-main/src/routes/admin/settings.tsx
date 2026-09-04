@@ -129,8 +129,22 @@ function AdminSettings() {
     setSaving(true);
     setSuccess(false);
     try {
-      const updated = await api.bulkUpdateSettings(settings);
+      const payload = { ...settings };
+      if (payload.featured_kit_price) {
+        payload.featured_kit_price = String(payload.featured_kit_price).replace(/,/g, "").replace(/[^0-9.]/g, "");
+      }
+      const updated = await api.bulkUpdateSettings(payload);
       setSettings((prev) => ({ ...prev, ...updated }));
+
+      // Sync Product 1 and Case 1 if featured_kit_price was provided
+      if (payload.featured_kit_price) {
+        const numPrice = parseFloat(payload.featured_kit_price);
+        if (!isNaN(numPrice) && numPrice > 0) {
+          api.updateProduct(1, { price: numPrice, sale_price: numPrice }).catch(() => {});
+          api.updateCase(1, { price: numPrice }).catch(() => {});
+        }
+      }
+
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
     } catch (err: any) {

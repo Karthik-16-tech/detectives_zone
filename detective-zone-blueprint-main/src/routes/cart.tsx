@@ -608,7 +608,7 @@ function CartPage() {
                     <span>Instant Email & WhatsApp Dispatched</span>
                   </div>
                   <p className="text-[11px] text-white/80">
-                    Your order is being placed! We will update you with all dispatch and tracking details in the next 24 hours. Kindly check your email (<span className="text-white font-bold">{confirmedOrder.customer_email || deliveryForm.email}</span>) and WhatsApp. Thank you for choosing Detective Zone!
+                    Your order is being placed! We will update you with all dispatch and tracking details in the next 24 hours. Kindly check your email (<span className="text-white font-bold">{confirmedOrder.customer_email || deliveryForm.email}</span>) and WhatsApp. Thank you for choosing Detectives Zone!
                   </p>
                 </div>
               </div>
@@ -621,7 +621,7 @@ function CartPage() {
                   Order #{confirmedOrder.order_number}
                 </h1>
                 <p className="mt-2 font-mono text-xs text-white/50">
-                  Your Detective Zone investigation dossier order is confirmed. A receipt has been dispatched to{" "}
+                  Your Detectives Zone investigation dossier order is confirmed. A receipt has been dispatched to{" "}
                   <span className="text-white font-bold">{confirmedOrder.customer_email || deliveryForm.email}</span>.
                 </p>
               </div>

@@ -1,5 +1,17 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { ArrowLeft, ArrowRight, Star, Lock, ShoppingBag } from "lucide-react";
+import { 
+  ArrowLeft, 
+  ArrowRight, 
+  Star, 
+  Lock, 
+  ShoppingBag, 
+  Truck, 
+  ShieldCheck, 
+  Clock, 
+  MessageSquare, 
+  CheckCircle2,
+  PackageCheck
+} from "lucide-react";
 import { useState, useEffect } from "react";
 import { api } from "@/lib/api";
 import { useCart } from "@/context/CartContext";
@@ -547,30 +559,66 @@ function CaseDetailPage() {
               const discountPct = Math.max(0, Math.round(((origPrice - currentPrice) / origPrice) * 100));
 
               return (
-                <div className="flex flex-wrap items-center gap-5 my-6 p-4 rounded-xl border border-white/10 bg-gradient-to-r from-[#120505] via-[#0d0707] to-[#080808] shadow-[0_8px_30px_rgba(0,0,0,0.8),inset_0_1px_1px_rgba(255,255,255,0.06)]">
-                  <div className="flex flex-col">
-                    <span className="font-mono text-[9px] uppercase tracking-[0.24em] text-[#9A9A9A]">Official Case Dossier</span>
-                    <div className="flex items-baseline gap-2 mt-0.5">
-                      <span className="font-mono text-[22px] font-bold text-white tracking-wider">₹{currentPrice}</span>
-                      <span className="font-mono text-[13px] text-white/35 line-through">₹{origPrice}</span>
-                      {discountPct > 0 && (
-                        <span className="font-mono text-[9px] font-bold uppercase tracking-wider text-[#4ade80] bg-[#4ade80]/10 border border-[#4ade80]/20 px-2 py-0.5 rounded-[4px]">
-                          {discountPct}% OFF
-                        </span>
-                      )}
+                <div className="space-y-4 my-6">
+                  <div className="flex flex-wrap items-center justify-between gap-4 p-4 sm:p-5 rounded-xl border border-white/10 bg-gradient-to-r from-[#120505] via-[#0d0707] to-[#080808] shadow-[0_8px_30px_rgba(0,0,0,0.8),inset_0_1px_1px_rgba(255,255,255,0.06)]">
+                    <div className="flex flex-col">
+                      <span className="font-mono text-[9px] uppercase tracking-[0.24em] text-[#9A9A9A]">Official Case Dossier Box</span>
+                      <div className="flex items-baseline gap-2.5 mt-0.5">
+                        <span className="font-mono text-[24px] sm:text-[26px] font-bold text-white tracking-wider">₹{currentPrice}</span>
+                        <span className="font-mono text-[13px] text-white/35 line-through">₹{origPrice}</span>
+                        {discountPct > 0 && (
+                          <span className="font-mono text-[9px] font-bold uppercase tracking-wider text-[#4ade80] bg-[#4ade80]/10 border border-[#4ade80]/20 px-2 py-0.5 rounded-[4px]">
+                            {discountPct}% OFF
+                          </span>
+                        )}
+                      </div>
+                      <span className="font-mono text-[9px] text-[#4ade80] flex items-center gap-1 mt-1">
+                        <CheckCircle2 className="h-3 w-3 inline shrink-0" />
+                        In Stock • Dispatches Within 24 Hours
+                      </span>
                     </div>
+
+                    <button
+                      onClick={handleBuyNow}
+                      className="group relative inline-flex items-center gap-2.5 overflow-hidden rounded-[6px] border border-[#D32F2F] bg-gradient-to-r from-[#D32F2F] via-[#C62828] to-[#9A0007] px-6 py-3 font-mono text-[12px] font-bold uppercase tracking-[0.22em] text-white shadow-[0_0_24px_rgba(211,47,47,0.45),inset_0_1px_1px_rgba(255,255,255,0.35)] transition-all duration-300 hover:shadow-[0_0_36px_rgba(211,47,47,0.7)] hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+                    >
+                      <ShoppingBag className="relative z-10 h-4 w-4" />
+                      <span className="relative z-10 font-bold">Order Case {file.id} — ₹{currentPrice}</span>
+                      <ArrowRight className="relative z-10 h-3.5 w-3.5 transition-transform duration-300 group-hover:translate-x-1" />
+                    </button>
                   </div>
 
-                  <button
-                    onClick={handleBuyNow}
-                    className="group relative inline-flex items-center gap-2.5 overflow-hidden rounded-[8px] border border-[#D32F2F] bg-gradient-to-r from-[#D32F2F] via-[#C62828] to-[#9A0007] px-6 py-3 font-mono text-[11.5px] font-bold uppercase tracking-[0.22em] text-white shadow-[0_0_24px_rgba(211,47,47,0.45),inset_0_1px_1px_rgba(255,255,255,0.35)] transition-all duration-300 hover:shadow-[0_0_36px_rgba(211,47,47,0.7)] hover:scale-[1.03] active:scale-[0.98] cursor-pointer"
-                  >
-                    {/* Smooth light sweep shimmer */}
-                    <span className="pointer-events-none absolute inset-0 -translate-x-full group-hover:translate-x-full bg-gradient-to-r from-transparent via-white/30 to-transparent transition-transform duration-700 ease-in-out" />
-                    <ShoppingBag className="relative z-10 h-4 w-4 transition-transform duration-300 group-hover:rotate-[-6deg]" />
-                    <span className="relative z-10 font-bold">Buy Now</span>
-                    <ArrowRight className="relative z-10 h-3.5 w-3.5 transition-transform duration-300 group-hover:translate-x-1.5" />
-                  </button>
+                  {/* Practical Trust Guarantee Bar */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-1">
+                    <div className="flex items-center gap-2 rounded border border-white/5 bg-[#0a0a0a] px-3 py-2">
+                      <Truck className="h-3.5 w-3.5 text-[#D32F2F] shrink-0" />
+                      <div>
+                        <p className="font-mono text-[9.5px] font-semibold text-white uppercase tracking-wider">Free Delivery</p>
+                        <p className="font-mono text-[8px] text-neutral-400">Pan-India (3–5 Days)</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 rounded border border-white/5 bg-[#0a0a0a] px-3 py-2">
+                      <ShieldCheck className="h-3.5 w-3.5 text-[#D32F2F] shrink-0" />
+                      <div>
+                        <p className="font-mono text-[9.5px] font-semibold text-white uppercase tracking-wider">COD Available</p>
+                        <p className="font-mono text-[8px] text-neutral-400">Pay cash upon delivery</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 rounded border border-white/5 bg-[#0a0a0a] px-3 py-2">
+                      <PackageCheck className="h-3.5 w-3.5 text-[#D32F2F] shrink-0" />
+                      <div>
+                        <p className="font-mono text-[9.5px] font-semibold text-white uppercase tracking-wider">Evidence Sealed</p>
+                        <p className="font-mono text-[8px] text-neutral-400">Tamper-proof guarantee</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 rounded border border-white/5 bg-[#0a0a0a] px-3 py-2">
+                      <MessageSquare className="h-3.5 w-3.5 text-[#D32F2F] shrink-0" />
+                      <div>
+                        <p className="font-mono text-[9.5px] font-semibold text-white uppercase tracking-wider">Case Support</p>
+                        <p className="font-mono text-[8px] text-neutral-400">+91 63057 29867</p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               );
             })()}
@@ -603,6 +651,8 @@ function CaseDetailPage() {
               ))}
             </div>
 
+
+
             <Link
               to="/cases"
               className="mt-8 inline-flex items-center gap-2 font-mono text-[11px] tracking-[0.2em] uppercase text-muted-foreground hover:text-white transition-colors duration-300"
@@ -611,6 +661,11 @@ function CaseDetailPage() {
               Back to Case Files
             </Link>
           </div>
+        </section>
+
+        {/* INVESTIGATION MODULES */}
+        <section className="mb-10">
+          <InvestigationModules modules={activeModules} />
         </section>
 
         {/* CASE INTRO VIDEO */}
@@ -708,10 +763,7 @@ function CaseDetailPage() {
           ))}
         </section>
 
-        {/* INVESTIGATION MODULES */}
-        <section className="mt-8">
-          <InvestigationModules modules={activeModules} />
-        </section>
+
 
         {/* QUOTE BANNER */}
         <section className="mt-8">
